@@ -1,0 +1,38 @@
+name:           rekishi
+version:        0.0.0.1
+category:       Finance
+author:         Miezhiko
+license:        GPLv3
+build-type:     Simple
+cabal-version:  2.0
+
+executable rekishi
+  main-is: Main.hs
+  other-modules:
+    Config
+    MarketDataStreamClient
+    SandBoxClient
+    SimpleClient
+    Historical
+    Paths_rekishi
+  hs-source-dirs:
+    src
+  default-extensions:
+    CPP
+    LambdaCase
+    MultiWayIf
+    UnicodeSyntax
+    DataKinds
+    OverloadedLabels
+    OverloadedStrings
+    ViewPatterns
+  build-depends:
+      base
+    , text
+    , aeson
+    , yaml
+    , lens
+    , tinkoff-invest-sdk
+  default-language: Haskell2010
+  ghc-options:
+    -Wall -threaded -rtsopts -with-rtsopts=-N
