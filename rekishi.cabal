@@ -9,7 +9,10 @@ cabal-version:  2.0
 executable rekishi
   main-is: Main.hs
   other-modules:
+    Base
     Config
+    State
+    Figi
     Historical
     Paths_rekishi
   hs-source-dirs:
@@ -25,6 +28,8 @@ executable rekishi
     ViewPatterns
   build-depends:
       base
+    , base-unicode-symbols
+    , containers
     , text
     , aeson
     , yaml

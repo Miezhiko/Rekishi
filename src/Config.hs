@@ -4,7 +4,10 @@
   , DerivingStrategies
   #-}
 
-module Config where
+module Config
+  ( Config (..)
+  , getCfg
+  ) where
 
 import           Data.Aeson
 import qualified Data.Yaml    as Yaml

@@ -1,6 +1,10 @@
-module Historical where
+module Historical
+  ( runHistoricalClient
+  ) where
 
+import           Base
 import           Config                         (Config (cfgToken))
+import           Figi
 
 import           Data.Foldable                  (for_)
 import           Data.ProtoLens.Message
@@ -15,31 +19,26 @@ import           Proto.Invest.Operations
 import qualified Proto.Invest.Operations_Fields as O
 import           Proto.Invest.Users
 
-runClient ∷ ClientConfig -> IO GrpcClient
-runClient cnfg = runExceptT (initGrpcClient cnfg) >>= \case
-  Left err -> error . show $ err
-  Right gc -> pure gc
-
 runGetAccounts ∷ GrpcClient -> IO [Account]
 runGetAccounts client = runExceptT (getAccounts client) >>= \case
-  Left err -> error . show $ err
+  Left err -> error ∘ show $ err
   Right ac -> pure ac
 
 runGetPortfolio ∷ GrpcClient -> PortfolioRequest -> IO PortfolioResponse
 runGetPortfolio client pr =
   runExceptT (getPortfolio client pr) >>= \case
-    Left err -> error . show $ err
+    Left err -> error ∘ show $ err
     Right pf -> pure pf
 
 getAccountStuff ∷ GrpcClient -> [Account] -> IO ()
 getAccountStuff _ []    = putStrLn "no accounts found for config"
 getAccountStuff g [acc] = do
   let accId = acc ^. O.id
-      pr    = build (O.accountId .~ accId)
+      pr    = build $ O.accountId .~ accId
   pf <- runGetPortfolio g pr
-  let positions = pf ^. O.positions
-  for_ positions $ \pos ->
-    putStrLn $ "F: " ++ T.unpack( pos ^. O.figi )
+  for_ (pf ^. O.positions) $ \pos -> do
+    ticker <- figiToTicker $ pos ^. O.figi
+    putStrLn $ "F: " ++ T.unpack ( ticker )
           ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
           ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
 getAccountStuff g (x:_) = getAccountStuff g [x]
@@ -52,5 +51,9 @@ runHistoricalClient cfg = do
   }
 
   client    <- runClient config
+
+  -- TODO: progress bar here
+  loadBaseShares client
+
   accounts  <- runGetAccounts client
   getAccountStuff client accounts
