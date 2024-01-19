@@ -10,9 +10,11 @@ executable rekishi
   main-is: Main.hs
   other-modules:
     Base
+    Version
     Config
     State
     Figi
+    Portfolio
     Historical
     Paths_rekishi
   hs-source-dirs:
