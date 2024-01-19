@@ -1,22 +1,18 @@
 module Historical where
 
-import           Config                          (Config (cfgToken))
+import           Config                         (Config (cfgToken))
 
-import           Control.Monad                   (void)
-
-import qualified Data.Text                       as T
+import           Data.Foldable                  (for_)
+import           Data.ProtoLens.Message
+import qualified Data.Text                      as T
 
 import           Invest.Client
-import           Invest.Service.Instruments      (shares)
-import           Invest.Service.MarketData
-import           Invest.Service.Operations       (getPortfolio)
-import           Invest.Service.Users            (getAccounts)
+import           Invest.Service.Operations      (getPortfolio)
+import           Invest.Service.Users           (getAccounts)
 
-import           Proto.Invest.Instruments
-import qualified Proto.Invest.Instruments_Fields as I
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields  as MD
+import qualified Proto.Invest.Common_Fields     as C
 import           Proto.Invest.Operations
+import qualified Proto.Invest.Operations_Fields as O
 import           Proto.Invest.Users
 
 runClient ∷ ClientConfig -> IO GrpcClient
@@ -38,13 +34,16 @@ runGetPortfolio client pr =
 getAccountStuff ∷ GrpcClient -> [Account] -> IO ()
 getAccountStuff _ []    = putStrLn "no accounts found for config"
 getAccountStuff g [acc] = do
-  --let accId = acc ^. id
-  -- let pr = PortfolioRequest "0"
-  -- pf <- runGetPortfolio g pr
-  print acc
+  let accId = acc ^. O.id
+      pr    = build (O.accountId .~ accId)
+  pf <- runGetPortfolio g pr
+  let positions = pf ^. O.positions
+  for_ positions $ \pos ->
+    putStrLn $ "F: " ++ T.unpack( pos ^. O.figi )
+          ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
+          ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
 getAccountStuff g (x:_) = getAccountStuff g [x]
 
--- Gets base shares prices and prints the first one
 runHistoricalClient ∷ Config -> IO ()
 runHistoricalClient cfg = do
   let config = ClientConfig {

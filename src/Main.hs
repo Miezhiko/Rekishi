@@ -1,19 +1,7 @@
 module Main where
 
-import           Config       (getCfg)
--- import           MarketDataStreamClient (runMarketDataStreamClient)
--- import           SandBoxClient          (runSandBoxClient)
-import           SimpleClient (runSimpleClient)
+import           Config     (getCfg)
 import           Historical (runHistoricalClient)
 
 main ∷ IO ()
-main = do
-  cfg <- getCfg
-
-  -- runSimpleClient cfg
-
-  runHistoricalClient cfg
-
-  -- runSandBoxClient cfg
-
-  -- runMarketDataStreamClient cfg
+main = getCfg >>= runHistoricalClient
