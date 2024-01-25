@@ -9,6 +9,7 @@ import           Base
 import           Config                (Config (cfgToken), getCfg)
 import           Figi                  (loadBaseShares)
 import           Portfolio             (runPortfolio)
+import           Historical            (runHistorical)
 import           Version
 
 import           System.Console.GetOpt
@@ -34,8 +35,9 @@ defaultOptions = Options {
 options ∷ [OptDescr (Options -> IO Options)]
 options = [
   Option "v" ["version"]    (NoArg showV)               "Display Version",
-  Option "h" ["help"]       (NoArg (showHelp options))  "Display Help",
-  Option "p" ["portfolio"]  (NoArg getP)                "Display Portfolio"
+  Option []  ["help"]       (NoArg (showHelp options))  "Display Help",
+  Option "p" ["portfolio"]  (NoArg getP)                "Display Portfolio",
+  Option "h" ["historical"] (NoArg getH)                "Display Historical Data"
   ]
 
 runPortfolioExec ∷ IO ()
@@ -51,5 +53,20 @@ runPortfolioExec = do
   loadBaseShares client
   runPortfolio client
 
+runHistoricalExec ∷ IO ()
+runHistoricalExec = do
+  myCfg <- getCfg
+  let config = ClientConfig {
+    token = (cfgToken myCfg),
+    appName = Nothing
+  }
+
+  client <- runClient config
+
+  runHistorical client
+
 getP ∷ ∀ τ β. τ -> IO β
 getP _ = runPortfolioExec >> exitSuccess
+
+getH ∷ ∀ τ β. τ -> IO β
+getH _ = runHistoricalExec >> exitSuccess

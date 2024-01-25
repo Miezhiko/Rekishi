@@ -36,8 +36,10 @@ getAccountStuff g [acc] = do
       pr    = build $ O.accountId .~ accId
   pf <- runGetPortfolio g pr
   for_ (pf ^. O.positions) $ \pos -> do
-    ticker <- figiToTicker $ pos ^. O.figi
-    putStrLn $ "F: " ++ T.unpack ( ticker )
+    let figi = pos ^. O.figi
+    ticker <- figiToTicker figi
+    putStrLn $ "F: " ++ T.unpack figi
+          ++ "\tT: " ++ T.unpack ticker
           ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
           ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
 getAccountStuff g (x:_) = getAccountStuff g [x]
