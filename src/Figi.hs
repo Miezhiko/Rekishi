@@ -1,3 +1,9 @@
+{-# LANGUAGE
+    KindSignatures
+  , RankNTypes
+  , FlexibleContexts
+  #-}
+
 module Figi
   ( figiToTicker
   , loadBaseShares
@@ -11,6 +17,8 @@ import qualified Data.Map                        as M
 import           Data.ProtoLens.Message
 import qualified Data.Text                       as T
 import           Data.Tuple                      (swap)
+
+import qualified Data.ProtoLens.Field as F
 
 import           Invest.Client
 import           Invest.Service.Instruments      (bonds, currencies, etfs, futures, shares)
@@ -27,17 +35,11 @@ getBaseShares gc = do
   myEtf         <- etfs       gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
   pure $ (myShares, myCurrencies, myBonds, myFutures, myEtf)
 
-getSharesTickers    ∷ [Share]     -> [(T.Text, T.Text)]
-getCurrencyTickers  ∷ [Currency]  -> [(T.Text, T.Text)]
-getBondTickers      ∷ [Bond]      -> [(T.Text, T.Text)]
-getFutureTickers    ∷ [Future]    -> [(T.Text, T.Text)]
-getEtfTickers       ∷ [Etf]       -> [(T.Text, T.Text)]
-
-getSharesTickers    = map (\s -> (s ^. I.figi, s ^. I.ticker))
-getCurrencyTickers  = map (\s -> (s ^. I.figi, s ^. I.ticker))
-getBondTickers      = map (\s -> (s ^. I.figi, s ^. I.ticker))
-getFutureTickers    = map (\s -> (s ^. I.figi, s ^. I.ticker))
-getEtfTickers       = map (\s -> (s ^. I.figi, s ^. I.ticker))
+getMap :: ∀ r. (
+  (F.HasField r "figi" T.Text),
+  (F.HasField r "ticker" T.Text)
+  ) => [r] -> [(T.Text, T.Text)]
+getMap = map (\s -> (s ^. I.figi, s ^. I.ticker))
 
 loadBaseShares ∷ GrpcClient -> IO ()
 loadBaseShares client = do
@@ -45,11 +47,11 @@ loadBaseShares client = do
     Left err -> error ∘ show $ err
     Right sh -> pure sh
   writeIORef stateShares s
-  let stk = getSharesTickers s
-      ctk = getCurrencyTickers c
-      btk = getBondTickers b
-      ftk = getFutureTickers f
-      etk = getEtfTickers e
+  let stk = getMap s
+      ctk = getMap c
+      btk = getMap b
+      ftk = getMap f
+      etk = getMap e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
   writeIORef stateFigis   $ M.fromList ( map swap stk ++ map swap ctk
                                       ++ map swap btk ++ map swap ftk
