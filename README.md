@@ -7,12 +7,6 @@ for_ (pf ^. O.positions) $ \pos -> do
 ```
 
 ```haskell
-runGetCandles ∷ GrpcClient -> GetCandlesRequest -> IO [HistoricCandle]
-runGetCandles client gcr =
-  runExceptT (getCandles client gcr) >>= \case
-    Left err -> error ∘ show $ err
-    Right cn -> pure cn
-
 sinceEpoch ∷ UTCTime -> Int64
 sinceEpoch = floor ∘ nominalDiffTimeToSeconds
                    ∘ utcTimeToPOSIXSeconds
@@ -23,8 +17,11 @@ toTimestamp s = build $ ( TS.seconds  .~ (s :: Int64) )
 
 runTicker ∷ GrpcClient -> String -> IO ()
 runTicker g ticker = do
-  figi <- tickerToFigi (T.pack ticker)
-  putStrLn $ "checking: " ++ ticker ++ ", FIGI: " ++ (T.unpack figi)
+  let tickerText  = T.pack ticker
+  (lot, curr) <- tickerToLot tickerText
+  figi        <- tickerToFigi tickerText
+  putStrLn $ "checking: " ++ ticker
+          ++ ", FIGI: " ++ (T.unpack figi)
   now <- getCurrentTime
   let Just daily  = maybeToEnum 5
   let unixTime    = sinceEpoch now
@@ -36,18 +33,20 @@ runTicker g ticker = do
                   ∘ ( MD.to       .~ tto )
                   ∘ ( MD.interval .~ daily )
   cndls <- runGetCandles g gcr
-  for_ cndls $ \pos -> do
-    putStrLn $ show ( pos ^. MD.close )
-
+  let lot64 = fromIntegral lot
+  for_ cndls $ \pos ->
+    let closePrice  = ( pos ^. MD.close ^. C.units ) * lot64
+        timeSeconds = pos ^. MD.time ^. TS.seconds
+        time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
+    in putStrLn $ show time ++ ": " ++ show closePrice ++ " " ++ (T.unpack curr)
 ```
 
 ```bash
-./rekishi -t TCSG
-checking: TCSG FIGI: BBG00QPYJ5H0
-{units: 3108 nano: 500000000}
-{units: 3133}
-{units: 3107 nano: 500000000}
-{units: 3077}
-{units: 3069 nano: 500000000}
-{units: 3090}
+checking: TCSG, FIGI: BBG00QPYJ5H0
+2024-01-19 07:00:00 UTC: 3108 rub
+2024-01-22 07:00:00 UTC: 3133 rub
+2024-01-23 07:00:00 UTC: 3107 rub
+2024-01-24 07:00:00 UTC: 3077 rub
+2024-01-25 07:00:00 UTC: 3069 rub
+2024-01-26 07:00:00 UTC: 3072 rub
 ```

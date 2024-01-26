@@ -1,13 +1,14 @@
 {-# LANGUAGE
-    KindSignatures
+    FlexibleContexts
+  , KindSignatures
   , RankNTypes
-  , FlexibleContexts
   #-}
 
 module Figi
   ( figiToTicker
   , loadBaseShares
   , tickerToFigi
+  , tickerToLot
   ) where
 
 import           Base
@@ -18,7 +19,7 @@ import           Data.ProtoLens.Message
 import qualified Data.Text                       as T
 import           Data.Tuple                      (swap)
 
-import qualified Data.ProtoLens.Field as F
+import qualified Data.ProtoLens.Field            as F
 
 import           Invest.Client
 import           Invest.Service.Instruments      (bonds, currencies, etfs, futures, shares)
@@ -35,12 +36,23 @@ getBaseShares gc = do
   myEtf         <- etfs       gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
   pure $ (myShares, myCurrencies, myBonds, myFutures, myEtf)
 
-getMap :: ∀ r. (
+getFigiTickerMap ∷ ∀ r. (
   (F.HasField r "figi" T.Text),
   (F.HasField r "ticker" T.Text)
   ) => [r] -> ([(T.Text, T.Text)], [(T.Text, T.Text)])
-getMap xs = let figiTicker = map (\s -> (s ^. I.figi, s ^. I.ticker)) xs
-            in (figiTicker, (map swap figiTicker))
+getFigiTickerMap xs =
+  let figiTicker = map (\s -> (s ^. I.figi, s ^. I.ticker)) xs
+  in (figiTicker, (map swap figiTicker))
+
+getTickerLotMap ∷ ∀ r. (
+  (F.HasField r "ticker" T.Text),
+  (F.HasField r "lot" Int32),
+  (F.HasField r "currency" T.Text)
+  ) => [r] -> [(T.Text, (Int32, T.Text))]
+getTickerLotMap = map (\s -> ( s ^. I.ticker
+                           , ( s ^. I.lot, s ^. I.currency )
+                           )
+                      )
 
 loadBaseShares ∷ GrpcClient -> IO ()
 loadBaseShares client = do
@@ -48,13 +60,14 @@ loadBaseShares client = do
     Left err -> error ∘ show $ err
     Right sh -> pure sh
   writeIORef stateShares s
-  let (stk, str) = getMap s
-      (ctk, ctr) = getMap c
-      (btk, btr) = getMap b
-      (ftk, ftr) = getMap f
-      (etk, etr) = getMap e
+  let (stk, str) = getFigiTickerMap s
+      (ctk, ctr) = getFigiTickerMap c
+      (btk, btr) = getFigiTickerMap b
+      (ftk, ftr) = getFigiTickerMap f
+      (etk, etr) = getFigiTickerMap e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
   writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
+  writeIORef stateLots    $ M.fromList ( getTickerLotMap s )
 
 figiToTicker ∷ T.Text -> IO T.Text
 figiToTicker figi = do
@@ -64,8 +77,15 @@ figiToTicker figi = do
     Nothing -> pure $ T.pack( "FIGI: " ++ (T.unpack figi) )
 
 tickerToFigi ∷ T.Text -> IO T.Text
-tickerToFigi figi = do
-  tickers <- readIORef stateFigis
-  case M.lookup figi tickers of
+tickerToFigi ticker = do
+  figis <- readIORef stateFigis
+  case M.lookup ticker figis of
     Just ti -> pure ti
-    Nothing -> pure $ T.pack( "Ticker: " ++ (T.unpack figi) )
+    Nothing -> pure $ T.pack( "Ticker: " ++ (T.unpack ticker) )
+
+tickerToLot ∷ T.Text -> IO (Int32, T.Text)
+tickerToLot ticker = do
+  lots <- readIORef stateLots
+  case M.lookup ticker lots of
+    Just lt -> pure lt
+    Nothing -> pure (0, T.pack "rub")

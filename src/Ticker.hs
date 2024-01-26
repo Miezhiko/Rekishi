@@ -15,11 +15,11 @@ import           Data.Time.Clock.POSIX
 import           Invest.Client
 import           Invest.Service.MarketData
 
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields         as MD
-
 import           Proto.Google.Protobuf.Timestamp
 import qualified Proto.Google.Protobuf.Timestamp_Fields as TS
+import qualified Proto.Invest.Common_Fields             as C
+import           Proto.Invest.Marketdata
+import qualified Proto.Invest.Marketdata_Fields         as MD
 
 runGetCandles ∷ GrpcClient -> GetCandlesRequest -> IO [HistoricCandle]
 runGetCandles client gcr =
@@ -37,8 +37,11 @@ toTimestamp s = build $ ( TS.seconds  .~ (s :: Int64) )
 
 runTicker ∷ GrpcClient -> String -> IO ()
 runTicker g ticker = do
-  figi <- tickerToFigi (T.pack ticker)
-  putStrLn $ "checking: " ++ ticker ++ ", FIGI: " ++ (T.unpack figi)
+  let tickerText  = T.pack ticker
+  (lot, curr) <- tickerToLot tickerText
+  figi        <- tickerToFigi tickerText
+  putStrLn $ "checking: " ++ ticker
+          ++ ", FIGI: " ++ (T.unpack figi)
   now <- getCurrentTime
   let Just daily  = maybeToEnum 5
   let unixTime    = sinceEpoch now
@@ -50,5 +53,9 @@ runTicker g ticker = do
                   ∘ ( MD.to       .~ tto )
                   ∘ ( MD.interval .~ daily )
   cndls <- runGetCandles g gcr
-  for_ cndls $ \pos -> do
-    putStrLn $ show ( pos ^. MD.close )
+  let lot64 = fromIntegral lot
+  for_ cndls $ \pos ->
+    let closePrice  = ( pos ^. MD.close ^. C.units ) * lot64
+        timeSeconds = pos ^. MD.time ^. TS.seconds
+        time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
+    in putStrLn $ show time ++ ": " ++ show closePrice ++ " " ++ (T.unpack curr)

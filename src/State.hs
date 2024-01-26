@@ -1,12 +1,14 @@
 module State
   ( module Export
   , stateFigis
+  , stateLots
   , stateShares
   , stateTickers
   ) where
 
 import           System.IO.Unsafe
 
+import           Data.Int                 as Export
 import           Data.IORef               as Export
 import qualified Data.Map                 as M
 import qualified Data.Text                as T
@@ -24,3 +26,7 @@ stateTickers = unsafePerformIO     $ newIORef M.empty
 stateFigis ∷ IORef (M.Map T.Text T.Text)
 {-# NOINLINE stateFigis #-}
 stateFigis = unsafePerformIO       $ newIORef M.empty
+
+stateLots ∷ IORef (M.Map T.Text (Int32, T.Text))
+{-# NOINLINE stateLots #-}
+stateLots = unsafePerformIO        $ newIORef M.empty
