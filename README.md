@@ -1,12 +1,4 @@
 ```haskell
-for_ (pf ^. O.positions) $ \pos -> do
-  ticker <- figiToTicker $ pos ^. O.figi
-  putStrLn $ "F: " ++ T.unpack ( ticker )
-        ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
-        ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
-```
-
-```haskell
 sinceEpoch ∷ UTCTime -> Int64
 sinceEpoch = floor ∘ nominalDiffTimeToSeconds
                    ∘ utcTimeToPOSIXSeconds
@@ -49,4 +41,20 @@ checking: TCSG, FIGI: BBG00QPYJ5H0
 2024-01-24 07:00:00 UTC: 3077 rub
 2024-01-25 07:00:00 UTC: 3069 rub
 2024-01-26 07:00:00 UTC: 3072 rub
+```
+
+```haskell
+for_ positions $ \pos -> do
+  let figi = pos ^. O.figi
+  ticker      <- figiToTicker figi
+  (lot, curr) <- tickerToLot ticker
+  let currPrice = pos ^. O.currentPrice ^. C.units
+      realPrice = currPrice * (fromIntegral lot)
+      quantity  = pos ^. O.quantity ^. C.units
+  putStrLn $ "F: " ++ T.unpack figi
+        ++ "\tT: " ++ T.unpack ticker
+        ++ "\tQ: " ++ show quantity
+        ++ "\tP: " ++ show ( realPrice ) ++ " " ++ (T.unpack curr)
+        ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ (T.unpack curr)
+putStrLn $ "Total Cap: " ++ show total
 ```
