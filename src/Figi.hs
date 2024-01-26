@@ -38,8 +38,9 @@ getBaseShares gc = do
 getMap :: ∀ r. (
   (F.HasField r "figi" T.Text),
   (F.HasField r "ticker" T.Text)
-  ) => [r] -> [(T.Text, T.Text)]
-getMap = map (\s -> (s ^. I.figi, s ^. I.ticker))
+  ) => [r] -> ([(T.Text, T.Text)], [(T.Text, T.Text)])
+getMap xs = let figiTicker = map (\s -> (s ^. I.figi, s ^. I.ticker)) xs
+            in (figiTicker, (map swap figiTicker))
 
 loadBaseShares ∷ GrpcClient -> IO ()
 loadBaseShares client = do
@@ -47,15 +48,13 @@ loadBaseShares client = do
     Left err -> error ∘ show $ err
     Right sh -> pure sh
   writeIORef stateShares s
-  let stk = getMap s
-      ctk = getMap c
-      btk = getMap b
-      ftk = getMap f
-      etk = getMap e
+  let (stk, str) = getMap s
+      (ctk, ctr) = getMap c
+      (btk, btr) = getMap b
+      (ftk, ftr) = getMap f
+      (etk, etr) = getMap e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
-  writeIORef stateFigis   $ M.fromList ( map swap stk ++ map swap ctk
-                                      ++ map swap btk ++ map swap ftk
-                                      ++ map swap etk )
+  writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
 
 figiToTicker ∷ T.Text -> IO T.Text
 figiToTicker figi = do
