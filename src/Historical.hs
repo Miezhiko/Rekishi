@@ -34,6 +34,7 @@ toTimestamp ∷ Int64 -> Timestamp
 toTimestamp s = build $ ( TS.seconds  .~ (s :: Int64) )
                       ∘ ( TS.nanos    .~ (0 :: Int32) )
 
+-- just work in progress experiments
 runHistorical ∷ GrpcClient -> IO ()
 runHistorical g = do
   now <- getCurrentTime
@@ -42,7 +43,7 @@ runHistorical g = do
       weekSecs    = 60 * 60 * 24 * 7
       tfrom       = toTimestamp $ unixTime - weekSecs
       tto         = toTimestamp unixTime
-  let gcr = build $ ( MD.figi     .~ (T.pack "TCS00A107563") )
+  let gcr = build $ ( MD.figi     .~ (T.pack "BBG00QPYJ5H0") )
                   ∘ ( MD.from     .~ tfrom )
                   ∘ ( MD.to       .~ tto )
                   ∘ ( MD.interval .~ daily )

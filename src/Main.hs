@@ -8,9 +8,12 @@ module Main where
 import           Base
 import           Config                (Config (cfgToken), getCfg)
 import           Figi                  (loadBaseShares)
-import           Portfolio             (runPortfolio)
 import           Historical            (runHistorical)
+import           Portfolio             (runPortfolio)
+import           Ticker                (runTicker)
 import           Version
+
+import           Data.Kind
 
 import           System.Console.GetOpt
 import           System.Environment    (getArgs)
@@ -37,33 +40,38 @@ options = [
   Option "v" ["version"]    (NoArg showV)               "Display Version",
   Option []  ["help"]       (NoArg (showHelp options))  "Display Help",
   Option "p" ["portfolio"]  (NoArg getP)                "Display Portfolio",
-  Option "h" ["historical"] (NoArg getH)                "Display Historical Data"
+  Option "h" ["historical"] (NoArg getH)                "Display Historical Data",
+  Option "t" ["ticker"]     (ReqArg gett "String")      "Display Some Ticker History"
   ]
 
-runPortfolioExec ∷ IO ()
-runPortfolioExec = do
+withConfig ∷ IO GrpcClient
+withConfig = do
   myCfg <- getCfg
   let config = ClientConfig {
     token = (cfgToken myCfg),
     appName = Nothing
   }
-
-  client <- runClient config
-
+  runClient config
+  
+runPortfolioExec ∷ IO ()
+runPortfolioExec = do
+  client <- withConfig
   loadBaseShares client
   runPortfolio client
 
 runHistoricalExec ∷ IO ()
 runHistoricalExec = do
-  myCfg <- getCfg
-  let config = ClientConfig {
-    token = (cfgToken myCfg),
-    appName = Nothing
-  }
-
-  client <- runClient config
-
+  client <- withConfig
   runHistorical client
+
+runTickerExec ∷ String -> IO ()
+runTickerExec ticker = do
+  client <- withConfig
+  loadBaseShares client
+  runTicker client ticker
+
+gett ∷ ∀ (μ :: Type -> Type). Monad μ => String -> Options -> μ Options
+gett arg ο = pure ο { optRekishi = runTickerExec arg }
 
 getP ∷ ∀ τ β. τ -> IO β
 getP _ = runPortfolioExec >> exitSuccess

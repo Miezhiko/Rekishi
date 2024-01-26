@@ -1,5 +1,5 @@
 name:           rekishi
-version:        0.0.0.2
+version:        0.0.0.3
 category:       Finance
 author:         Miezhiko
 license:        GPLv3
@@ -16,6 +16,7 @@ executable rekishi
     Figi
     Portfolio
     Historical
+    Ticker
     Paths_rekishi
   hs-source-dirs:
     src

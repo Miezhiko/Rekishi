@@ -1,6 +1,7 @@
 module Figi
   ( figiToTicker
   , loadBaseShares
+  , tickerToFigi
   ) where
 
 import           Base
@@ -11,11 +12,15 @@ import           Data.ProtoLens.Message
 import qualified Data.Text                       as T
 
 import           Invest.Client
-import           Invest.Service.Instruments      (bonds, currencies, futures, shares, etfs)
+import           Invest.Service.Instruments      (bonds, currencies, etfs, futures, shares)
 
 import           Proto.Invest.Instruments
 import qualified Proto.Invest.Instruments_Fields as I
 
+swapXS ∷ [(T.Text, T.Text)] -> [(T.Text, T.Text)]
+swapXS = map swap
+ where swap ∷ (a, b) -> (b, a)
+       swap (a, b) = (b, a)
 
 getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond], [Future], [Etf])
 getBaseShares gc = do
@@ -50,6 +55,11 @@ loadBaseShares client = do
       ftk = getFutureTickers f
       etk = getEtfTickers e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
+  writeIORef stateFigis   $ M.fromList ( swapXS stk
+                                      ++ swapXS ctk
+                                      ++ swapXS btk
+                                      ++ swapXS ftk
+                                      ++ swapXS etk )
 
 figiToTicker ∷ T.Text -> IO T.Text
 figiToTicker figi = do
@@ -57,3 +67,10 @@ figiToTicker figi = do
   case M.lookup figi tickers of
     Just ti -> pure ti
     Nothing -> pure $ T.pack( "FIGI: " ++ (T.unpack figi) )
+
+tickerToFigi ∷ T.Text -> IO T.Text
+tickerToFigi figi = do
+  tickers <- readIORef stateFigis
+  case M.lookup figi tickers of
+    Just ti -> pure ti
+    Nothing -> pure $ T.pack( "Ticker: " ++ (T.unpack figi) )

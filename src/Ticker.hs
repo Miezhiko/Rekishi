@@ -1,12 +1,26 @@
-```haskell
-for_ (pf ^. O.positions) $ \pos -> do
-  ticker <- figiToTicker $ pos ^. O.figi
-  putStrLn $ "F: " ++ T.unpack ( ticker )
-        ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
-        ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
-```
+module Ticker
+  ( runTicker
+  ) where
 
-```haskell
+import           Base
+import           Figi
+
+import           Data.Foldable                          (for_)
+import           Data.Int
+import           Data.ProtoLens.Message
+import qualified Data.Text                              as T
+import           Data.Time
+import           Data.Time.Clock.POSIX
+
+import           Invest.Client
+import           Invest.Service.MarketData
+
+import           Proto.Invest.Marketdata
+import qualified Proto.Invest.Marketdata_Fields         as MD
+
+import           Proto.Google.Protobuf.Timestamp
+import qualified Proto.Google.Protobuf.Timestamp_Fields as TS
+
 runGetCandles ∷ GrpcClient -> GetCandlesRequest -> IO [HistoricCandle]
 runGetCandles client gcr =
   runExceptT (getCandles client gcr) >>= \case
@@ -38,16 +52,3 @@ runTicker g ticker = do
   cndls <- runGetCandles g gcr
   for_ cndls $ \pos -> do
     putStrLn $ show ( pos ^. MD.close )
-
-```
-
-```bash
-./rekishi -t TCSG
-checking: TCSG FIGI: BBG00QPYJ5H0
-{units: 3108 nano: 500000000}
-{units: 3133}
-{units: 3107 nano: 500000000}
-{units: 3077}
-{units: 3069 nano: 500000000}
-{units: 3090}
-```
