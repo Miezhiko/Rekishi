@@ -9,6 +9,8 @@ import           Data.Foldable                  (for_)
 import           Data.ProtoLens.Message
 import qualified Data.Text                      as T
 
+import           Control.Monad                  (foldM)
+
 import           Invest.Client
 import           Invest.Service.Operations      (getPortfolio)
 import           Invest.Service.Users           (getAccounts)
@@ -35,13 +37,28 @@ getAccountStuff g [acc] = do
   let accId = acc ^. O.id
       pr    = build $ O.accountId .~ accId
   pf <- runGetPortfolio g pr
-  for_ (pf ^. O.positions) $ \pos -> do
+  let positions = pf ^. O.positions
+  total <- foldM (\summ pos -> do
     let figi = pos ^. O.figi
-    ticker <- figiToTicker figi
+    ticker      <- figiToTicker figi
+    (lot, _)    <- tickerToLot ticker
+    let currPrice = pos ^. O.currentPrice ^. C.units
+        realPrice = currPrice * (fromIntegral lot)
+        quantity  = pos ^. O.quantity ^. C.units
+    pure $ summ + realPrice * quantity) 0 positions
+  for_ positions $ \pos -> do
+    let figi = pos ^. O.figi
+    ticker      <- figiToTicker figi
+    (lot, curr) <- tickerToLot ticker
+    let currPrice = pos ^. O.currentPrice ^. C.units
+        realPrice = currPrice * (fromIntegral lot)
+        quantity  = pos ^. O.quantity ^. C.units
     putStrLn $ "F: " ++ T.unpack figi
           ++ "\tT: " ++ T.unpack ticker
-          ++ "\tQ: " ++ show ( pos ^. O.quantity ^. C.units )
-          ++ "\tP: " ++ show ( pos ^. O.currentPrice ^. C.units )
+          ++ "\tQ: " ++ show quantity
+          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ (T.unpack curr)
+          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ (T.unpack curr)
+  putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
 
 runPortfolio ∷ GrpcClient -> IO ()

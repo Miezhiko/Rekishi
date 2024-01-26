@@ -37,7 +37,7 @@ toTimestamp s = build $ ( TS.seconds  .~ (s :: Int64) )
 
 runTicker ∷ GrpcClient -> String -> IO ()
 runTicker g ticker = do
-  let tickerText  = T.pack ticker
+  let tickerText = T.pack ticker
   (lot, curr) <- tickerToLot tickerText
   figi        <- tickerToFigi tickerText
   putStrLn $ "checking: " ++ ticker

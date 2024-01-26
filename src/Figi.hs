@@ -67,7 +67,9 @@ loadBaseShares client = do
       (etk, etr) = getFigiTickerMap e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
   writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
-  writeIORef stateLots    $ M.fromList ( getTickerLotMap s )
+  writeIORef stateLots    $ M.fromList ( getTickerLotMap s ++ getTickerLotMap c
+                                      ++ getTickerLotMap b ++ getTickerLotMap f
+                                      ++ getTickerLotMap e )
 
 figiToTicker ∷ T.Text -> IO T.Text
 figiToTicker figi = do
