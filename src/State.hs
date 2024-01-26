@@ -15,7 +15,7 @@ import           Proto.Invest.Instruments
 
 stateShares ∷ IORef [Share]
 {-# NOINLINE stateShares #-}
-stateShares = unsafePerformIO     $ newIORef []
+stateShares = unsafePerformIO      $ newIORef []
 
 stateTickers ∷ IORef (M.Map T.Text T.Text)
 {-# NOINLINE stateTickers #-}
@@ -23,4 +23,4 @@ stateTickers = unsafePerformIO     $ newIORef M.empty
 
 stateFigis ∷ IORef (M.Map T.Text T.Text)
 {-# NOINLINE stateFigis #-}
-stateFigis = unsafePerformIO     $ newIORef M.empty
+stateFigis = unsafePerformIO       $ newIORef M.empty

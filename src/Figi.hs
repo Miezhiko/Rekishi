@@ -10,17 +10,13 @@ import           State
 import qualified Data.Map                        as M
 import           Data.ProtoLens.Message
 import qualified Data.Text                       as T
+import           Data.Tuple                      (swap)
 
 import           Invest.Client
 import           Invest.Service.Instruments      (bonds, currencies, etfs, futures, shares)
 
 import           Proto.Invest.Instruments
 import qualified Proto.Invest.Instruments_Fields as I
-
-swapXS ∷ [(T.Text, T.Text)] -> [(T.Text, T.Text)]
-swapXS = map swap
- where swap ∷ (a, b) -> (b, a)
-       swap (a, b) = (b, a)
 
 getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond], [Future], [Etf])
 getBaseShares gc = do
@@ -55,11 +51,9 @@ loadBaseShares client = do
       ftk = getFutureTickers f
       etk = getEtfTickers e
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
-  writeIORef stateFigis   $ M.fromList ( swapXS stk
-                                      ++ swapXS ctk
-                                      ++ swapXS btk
-                                      ++ swapXS ftk
-                                      ++ swapXS etk )
+  writeIORef stateFigis   $ M.fromList ( map swap stk ++ map swap ctk
+                                      ++ map swap btk ++ map swap ftk
+                                      ++ map swap etk )
 
 figiToTicker ∷ T.Text -> IO T.Text
 figiToTicker figi = do

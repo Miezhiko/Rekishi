@@ -28,7 +28,7 @@ runTicker g ticker = do
   now <- getCurrentTime
   let Just daily  = maybeToEnum 5
   let unixTime    = sinceEpoch now
-      weekSecs    = 60 * 60 * 24 * 7 * 30
+      weekSecs    = 60 * 60 * 24 * 7
       tfrom       = toTimestamp $ unixTime - weekSecs
       tto         = toTimestamp unixTime
   let gcr = build $ ( MD.figi     .~ figi )

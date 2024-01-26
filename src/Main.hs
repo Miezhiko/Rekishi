@@ -60,9 +60,7 @@ runPortfolioExec = do
   runPortfolio client
 
 runHistoricalExec ∷ IO ()
-runHistoricalExec = do
-  client <- withConfig
-  runHistorical client
+runHistoricalExec = withConfig >>= runHistorical
 
 runTickerExec ∷ String -> IO ()
 runTickerExec ticker = do
