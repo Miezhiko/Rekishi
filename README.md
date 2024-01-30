@@ -30,31 +30,15 @@ runTicker g ticker = do
     let closePrice  = ( pos ^. MD.close ^. C.units ) * lot64
         timeSeconds = pos ^. MD.time ^. TS.seconds
         time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
-    in putStrLn $ show time ++ ": " ++ show closePrice ++ " " ++ (T.unpack curr)
+    in putStrLn $ show (utctDay time) ++ ": " ++ show closePrice ++ " " ++ (T.unpack curr)
 ```
 
 ```bash
-checking: TCSG, FIGI: BBG00QPYJ5H0
-2024-01-19 07:00:00 UTC: 3108 rub
-2024-01-22 07:00:00 UTC: 3133 rub
-2024-01-23 07:00:00 UTC: 3107 rub
-2024-01-24 07:00:00 UTC: 3077 rub
-2024-01-25 07:00:00 UTC: 3069 rub
-2024-01-26 07:00:00 UTC: 3072 rub
-```
-
-```haskell
-for_ positions $ \pos -> do
-  let figi = pos ^. O.figi
-  ticker      <- figiToTicker figi
-  (lot, curr) <- tickerToLot ticker
-  let currPrice = pos ^. O.currentPrice ^. C.units
-      realPrice = currPrice * (fromIntegral lot)
-      quantity  = pos ^. O.quantity ^. C.units
-  putStrLn $ "F: " ++ T.unpack figi
-        ++ "\tT: " ++ T.unpack ticker
-        ++ "\tQ: " ++ show quantity
-        ++ "\tP: " ++ show ( realPrice ) ++ " " ++ (T.unpack curr)
-        ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ (T.unpack curr)
-putStrLn $ "Total Cap: " ++ show total
+rekishi -t TCSG
+2024-01-23: 3107 rub
+2024-01-24: 3077 rub
+2024-01-25: 3069 rub
+2024-01-26: 3093 rub
+2024-01-29: 3162 rub
+2024-01-30: 3168 rub
 ```
