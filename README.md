@@ -1,3 +1,5 @@
+[![Haskell CI](https://github.com/Miezhiko/Rekishi/actions/workflows/haskell.yml/badge.svg)](https://github.com/Miezhiko/Rekishi/actions/workflows/haskell.yml)
+
 ```haskell
 sinceEpoch ∷ UTCTime -> Int64
 sinceEpoch = floor ∘ nominalDiffTimeToSeconds
