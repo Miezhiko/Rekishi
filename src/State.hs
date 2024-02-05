@@ -19,7 +19,7 @@ stateShares ∷ IORef [Share]
 {-# NOINLINE stateShares #-}
 stateShares = unsafePerformIO      $ newIORef []
 
-stateTickers ∷ IORef (M.Map T.Text T.Text)
+stateTickers ∷ IORef (M.Map T.Text (T.Text, T.Text))
 {-# NOINLINE stateTickers #-}
 stateTickers = unsafePerformIO     $ newIORef M.empty
 

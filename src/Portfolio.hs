@@ -40,7 +40,7 @@ getAccountStuff g [acc] = do
   let positions = pf ^. O.positions
   total <- foldM (\summ pos -> do
     let figi = pos ^. O.figi
-    ticker      <- figiToTicker figi
+    (ticker, _) <- figiToTicker figi
     (lot, _)    <- tickerToLot ticker
     let currPrice = pos ^. O.currentPrice ^. C.units
         realPrice = currPrice * (fromIntegral lot)
@@ -48,16 +48,17 @@ getAccountStuff g [acc] = do
     pure $ summ + realPrice * quantity) 0 positions
   for_ positions $ \pos -> do
     let figi = pos ^. O.figi
-    ticker      <- figiToTicker figi
+    (ticker, n) <- figiToTicker figi
     (lot, curr) <- tickerToLot ticker
     let currPrice = pos ^. O.currentPrice ^. C.units
         realPrice = currPrice * (fromIntegral lot)
         quantity  = pos ^. O.quantity ^. C.units
-    putStrLn $ "F: " ++ T.unpack figi
-          ++ "\tT: " ++ T.unpack ticker
+        currency  = T.unpack curr
+    putStrLn $ "T: " ++ take 4 ( T.unpack ticker )
           ++ "\tQ: " ++ show quantity
-          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ (T.unpack curr)
-          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ (T.unpack curr)
+          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ currency
+          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ currency
+          ++ "\tN: " ++ T.unpack n
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
 

@@ -17,7 +17,6 @@ import           State
 import qualified Data.Map                        as M
 import           Data.ProtoLens.Message
 import qualified Data.Text                       as T
-import           Data.Tuple                      (swap)
 
 import qualified Data.ProtoLens.Field            as F
 
@@ -38,11 +37,14 @@ getBaseShares gc = do
 
 getFigiTickerMap ∷ ∀ r. (
   (F.HasField r "figi" T.Text),
-  (F.HasField r "ticker" T.Text)
-  ) => [r] -> ([(T.Text, T.Text)], [(T.Text, T.Text)])
+  (F.HasField r "ticker" T.Text),
+  (F.HasField r "name" T.Text)
+  ) => [r] -> ([(T.Text, (T.Text, T.Text))], [(T.Text, T.Text)])
 getFigiTickerMap xs =
-  let figiTicker = map (\s -> (s ^. I.figi, s ^. I.ticker)) xs
-  in (figiTicker, (map swap figiTicker))
+  let figiTicker = map (\s -> (s ^. I.figi, ( s ^. I.ticker
+                                            , s ^. I.name ))) xs
+      tickerFigi = map (\s -> (s ^. I.ticker, s ^. I.figi)) xs
+  in (figiTicker, tickerFigi)
 
 getTickerLotMap ∷ ∀ r. (
   (F.HasField r "ticker" T.Text),
@@ -71,12 +73,12 @@ loadBaseShares client = do
                                       ++ getTickerLotMap b ++ getTickerLotMap f
                                       ++ getTickerLotMap e )
 
-figiToTicker ∷ T.Text -> IO T.Text
+figiToTicker ∷ T.Text -> IO (T.Text, T.Text)
 figiToTicker figi = do
   tickers <- readIORef stateTickers
   case M.lookup figi tickers of
     Just ti -> pure ti
-    Nothing -> pure $ T.pack( "FIGI: " ++ (T.unpack figi) )
+    Nothing -> pure ( T.pack( "FIGI: " ++ (T.unpack figi) ), T.pack [] )
 
 tickerToFigi ∷ T.Text -> IO T.Text
 tickerToFigi ticker = do
