@@ -1,32 +1,27 @@
 module State
   ( module Export
   , stateFigis
-  , stateLots
   , stateShares
   , stateTickers
   ) where
 
+import           Types
+
 import           System.IO.Unsafe
 
-import           Data.Int                 as Export
-import           Data.IORef               as Export
-import qualified Data.Map                 as M
-import qualified Data.Text                as T
+import           Data.Int         as Export
+import           Data.IORef       as Export
+import qualified Data.Map         as M
+import qualified Data.Text        as T
 
-import           Proto.Invest.Instruments
-
-stateShares ∷ IORef [Share]
+stateShares ∷ IORef [ReShare]
 {-# NOINLINE stateShares #-}
 stateShares = unsafePerformIO      $ newIORef []
 
-stateTickers ∷ IORef (M.Map T.Text (T.Text, T.Text))
+stateTickers ∷ IORef (M.Map T.Text ReShare)
 {-# NOINLINE stateTickers #-}
 stateTickers = unsafePerformIO     $ newIORef M.empty
 
 stateFigis ∷ IORef (M.Map T.Text T.Text)
 {-# NOINLINE stateFigis #-}
 stateFigis = unsafePerformIO       $ newIORef M.empty
-
-stateLots ∷ IORef (M.Map T.Text (Int32, T.Text))
-{-# NOINLINE stateLots #-}
-stateLots = unsafePerformIO        $ newIORef M.empty

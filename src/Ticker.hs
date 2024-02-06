@@ -4,6 +4,7 @@ module Ticker
 
 import           Base
 import           Figi
+import           Types
 
 import           Data.Foldable                          (for_)
 import           Data.Int
@@ -40,9 +41,9 @@ getCandlesWith ∷ Timestamp -- from
               -> GrpcClient
               -> T.Text 
               -> IO [HistoricCandle]
-getCandlesWith tfrom tto g figi = do
+getCandlesWith tfrom tto g myFigi = do
   let Just daily  = maybeToEnum 5
-  let gcr = build $ ( MD.figi     .~ figi )
+  let gcr = build $ ( MD.figi     .~ myFigi )
                   ∘ ( MD.from     .~ tfrom )
                   ∘ ( MD.to       .~ tto )
                   ∘ ( MD.interval .~ daily )
@@ -52,33 +53,39 @@ getCandlesByTickerWith ∷ Timestamp -- from
                       -> Timestamp -- to
                       -> GrpcClient
                       -> String 
-                      -> IO ([HistoricCandle], Int64, T.Text)
-getCandlesByTickerWith tfrom tto g ticker = do
-  let tickerText = T.pack ticker
-  (lot, curr) <- tickerToLot tickerText
-  figi        <- tickerToFigi tickerText
-  candles     <- getCandlesWith tfrom tto g figi
-  pure        (candles, fromIntegral lot, curr)
+                      -> IO (Maybe ([HistoricCandle], Int, T.Text))
+getCandlesByTickerWith tfrom tto g myTicker = do
+  let tickerText = T.pack myTicker
+  myFigi      <- tickerToFigi tickerText
+  reShare     <- figiToReShare myFigi
+  case reShare of
+    Just re -> do
+      candles  <- getCandlesWith tfrom tto g myFigi
+      pure $ Just (candles, lot re, currency re)
+    Nothing -> pure Nothing
 
 runTickerWith ∷ Timestamp -- from
              -> Timestamp -- to
              -> GrpcClient
              -> String 
              -> IO ()
-runTickerWith tfrom tto g ticker = do
-  (cndls, lot64, curr) <- getCandlesByTickerWith tfrom tto g ticker
-  for_ cndls $ \pos ->
-    let closePrice  = pos ^. MD.close ^. C.units * lot64
-        timeSeconds = pos ^. MD.time ^. TS.seconds
-        time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
-    in putStrLn $ show (utctDay time) ++ ": "
-               ++ show closePrice ++ " " ++ (T.unpack curr)
+runTickerWith tfrom tto g myTicker = do
+  maybeCandles <- getCandlesByTickerWith tfrom tto g myTicker
+  case maybeCandles of
+    Just (cndls, lot64, curr) ->
+      for_ cndls $ \pos ->
+        let closePrice  = (fromIntegral (pos ^. MD.close ^. C.units)) * lot64
+            timeSeconds = pos ^. MD.time ^. TS.seconds
+            time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
+        in putStrLn $ show (utctDay time) ++ ": "
+                  ++ show closePrice ++ " " ++ (T.unpack curr)
+    Nothing -> putStrLn "No reshare found"
 
 runTicker ∷ GrpcClient -> String -> IO ()
-runTicker g ticker = do
+runTicker g myTicker = do
   now <- getCurrentTime
   let unixTime    = sinceEpoch now
       weekSecs    = 60 * 60 * 24 * 7
       tfrom       = toTimestamp $ unixTime - weekSecs
       tto         = toTimestamp unixTime
-  runTickerWith tfrom tto g ticker
+  runTickerWith tfrom tto g myTicker

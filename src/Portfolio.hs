@@ -4,6 +4,7 @@ module Portfolio
 
 import           Base
 import           Figi
+import           Types
 
 import           Data.Foldable                  (for_)
 import           Data.ProtoLens.Message
@@ -39,26 +40,29 @@ getAccountStuff g [acc] = do
   pf <- runGetPortfolio g pr
   let positions = pf ^. O.positions
   total <- foldM (\summ pos -> do
-    let figi = pos ^. O.figi
-    (ticker, _) <- figiToTicker figi
-    (lot, _)    <- tickerToLot ticker
-    let currPrice = pos ^. O.currentPrice ^. C.units
-        realPrice = currPrice * (fromIntegral lot)
-        quantity  = pos ^. O.quantity ^. C.units
-    pure $ summ + realPrice * quantity) 0 positions
+    let myFigi = pos ^. O.figi
+    reShare <- figiToReShare myFigi
+    case reShare of
+      Just re -> let currPrice = pos ^. O.currentPrice ^. C.units
+                     realPrice = (fromIntegral currPrice) * (lot re)
+                     quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
+                 in pure $ summ + realPrice * quantity
+      Nothing -> pure summ) 0 positions
   for_ positions $ \pos -> do
-    let figi = pos ^. O.figi
-    (ticker, n) <- figiToTicker figi
-    (lot, curr) <- tickerToLot ticker
-    let currPrice = pos ^. O.currentPrice ^. C.units
-        realPrice = currPrice * (fromIntegral lot)
-        quantity  = pos ^. O.quantity ^. C.units
-        currency  = T.unpack curr
-    putStrLn $ "T: " ++ take 4 ( T.unpack ticker )
-          ++ "\tQ: " ++ show quantity
-          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ currency
-          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ currency
-          ++ "\tN: " ++ T.unpack n
+    let myFigi = pos ^. O.figi
+    reShare <- figiToReShare myFigi
+    case reShare of
+      Just re -> do
+        let currPrice = pos ^. O.currentPrice ^. C.units
+            realPrice = (fromIntegral currPrice) * (lot re)
+            quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
+            sCurrency = T.unpack $ currency re
+        putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
+              ++ "\tQ: " ++ show quantity
+              ++ "\tP: " ++ show ( realPrice ) ++ " " ++ sCurrency
+              ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ sCurrency
+              ++ "\tN: " ++ T.unpack ( name re )
+      Nothing -> putStrLn $ "Error on " ++ ( T.unpack myFigi )
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
 
