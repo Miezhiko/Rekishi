@@ -7,10 +7,9 @@ import           Figi
 import           Types
 
 import           Data.Foldable                  (for_)
+import           Data.Maybe                     (catMaybes)
 import           Data.ProtoLens.Message
 import qualified Data.Text                      as T
-
-import           Control.Monad                  (foldM)
 
 import           Invest.Client
 import           Invest.Service.Operations      (getPortfolio)
@@ -39,30 +38,33 @@ getAccountStuff g [acc] = do
       pr    = build $ O.accountId .~ accId
   pf <- runGetPortfolio g pr
   let positions = pf ^. O.positions
-  total <- foldM (\summ pos -> do
-    let myFigi = pos ^. O.figi
-    reShare <- figiToReShare myFigi
-    case reShare of
-      Just re -> let currPrice = pos ^. O.currentPrice ^. C.units
-                     realPrice = (fromIntegral currPrice) * (lot re)
-                     quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
-                 in pure $ summ + realPrice * quantity
-      Nothing -> pure summ) 0 positions
-  for_ positions $ \pos -> do
-    let myFigi = pos ^. O.figi
-    reShare <- figiToReShare myFigi
+  reSharesMb <- traverse (\pos -> do
+    reShare <- figiToReShare $ pos ^. O.figi
     case reShare of
       Just re -> do
         let currPrice = pos ^. O.currentPrice ^. C.units
-            realPrice = (fromIntegral currPrice) * (lot re)
+            psNominal = mUnits $ nominal re
+            lotPrice  = (fromIntegral currPrice) * (lot re)
+            realPrice = if psNominal > 0
+                          then psNominal --lotPrice `div` psNominal
+                          else lotPrice
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
-            sCurrency = T.unpack $ currency re
-        putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
-              ++ "\tQ: " ++ show quantity
-              ++ "\tP: " ++ show ( realPrice ) ++ " " ++ sCurrency
-              ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ sCurrency
-              ++ "\tN: " ++ T.unpack ( name re )
-      Nothing -> putStrLn $ "Error on " ++ ( T.unpack myFigi )
+        pure $ Just (re, realPrice, quantity)
+      Nothing -> pure Nothing) positions
+  let reShares = catMaybes reSharesMb
+      total = foldl (\summ (_, realPrice, quantity) ->
+                      summ + realPrice * quantity) 0 reShares
+      maxQl = maximum $ map (\(_, _, q) -> length (show q)) reShares
+  for_ reShares $ \(re, realPrice, quantity) -> do
+    let sCurrency = T.unpack $ currency re
+        quantityS = show quantity
+        quantityP = maxQl - length quantityS
+        quantityA = concat $ replicate quantityP " " 
+    putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
+          ++ "\tQ: " ++ quantityS ++ quantityA
+          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ sCurrency
+          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ sCurrency
+          ++ "\tN: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
 

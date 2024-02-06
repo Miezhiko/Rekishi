@@ -1,5 +1,6 @@
 module Types
   ( ReMoneyValue (..)
+  , ReQuotation (..)
   , ReShare (..)
   ) where
 
@@ -11,26 +12,27 @@ data ReShare
       , ticker                :: T.Text
       , lot                   :: Int
       , currency              :: T.Text
+      , dlong                 :: ReQuotation
+      , dshort                :: ReQuotation
+      -- nominal feels likecompletely useless value
+      -- might drop later
+      , nominal               :: ReMoneyValue
       , name                  :: T.Text
-      -- , sector                :: T.Text
-      -- , nominal               :: ReMoneyValue
       , apiTradeAvailableFlag :: Bool
       }
   deriving (Show)
 
 data ReMoneyValue
   = ReMoneyValue
-      { reCurrency :: T.Text
-      , reUnits    :: Integer
-      , reNano     :: Integer
+      { mCurrency :: T.Text
+      , mUnits    :: Int
+      , mNano     :: Int
       }
   deriving (Show)
 
-{-
 data ReQuotation
   = ReQuotation
-      { reUnits :: Integer
-      , reNano  :: Integer
+      { qUnits :: Int
+      , qNano  :: Int
       }
   deriving (Show)
--}
