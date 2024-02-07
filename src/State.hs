@@ -27,6 +27,6 @@ stateFigis ∷ IORef (M.Map T.Text T.Text)
 {-# NOINLINE stateFigis #-}
 stateFigis = unsafePerformIO       $ newIORef M.empty
 
-statePrices ∷ IORef (M.Map T.Text Int)
+statePrices ∷ IORef (M.Map T.Text (Int, Float))
 {-# NOINLINE statePrices #-}
 statePrices = unsafePerformIO      $ newIORef M.empty

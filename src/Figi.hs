@@ -112,9 +112,12 @@ loadBaseShares client = do
   lastPricesC <- runExceptT (getSharesLastPrices client cc) >>= \case
                   Left err -> error ∘ show $ err
                   Right pr -> pure pr
-  let priceMap = map (\p -> ( p ^. MD.figi
-                            , fromIntegral (p ^. MD.price ^. C.units) )
-                     ) $ lastPricesS ++ lastPricesC
+  let priceMap = map (\p ->
+                  let myPrice = p ^. MD.price
+                      myUnits = fromIntegral $ myPrice ^. C.units
+                      myNanos = fromIntegral $ myPrice ^. C.nano
+                      untiNan = (myUnits, (( myNanos / 1000000000 ) :: Float))
+                  in ( p ^. MD.figi, untiNan ) ) $ lastPricesS ++ lastPricesC
   writeIORef statePrices  $ M.fromList priceMap
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ) -- ++ ftk ++ etk
   writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ) -- ++ ftr ++ etr
@@ -133,7 +136,7 @@ tickerToFigi myTicker = do
     Just ti -> pure ti
     Nothing -> pure $ T.pack( "Ticker: " ++ (T.unpack myTicker) )
 
-figiToLastPrice ∷ T.Text -> IO (Maybe Int)
+figiToLastPrice ∷ T.Text -> IO (Maybe (Int, Float))
 figiToLastPrice myFigi = do
   prices <- readIORef statePrices
   case M.lookup myFigi prices of

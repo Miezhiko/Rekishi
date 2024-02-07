@@ -6,6 +6,8 @@ import           Base
 import           Figi
 import           Types
 
+import           Text.Printf
+
 import           Data.Foldable                  (for_)
 import           Data.Maybe                     (catMaybes)
 import           Data.ProtoLens.Message
@@ -44,42 +46,43 @@ getAccountStuff g [acc] = do
     lsPrice <- figiToLastPrice myFigi
     case reShare of
       Just re -> do
-        let currPrice =
+        let realPrice =
               case lsPrice of
-                Just p  -> p -- last price is more actual than current
-                Nothing -> fromIntegral $ pos ^. O.currentPrice ^. C.units
-            -- TODO: check if currency not multiply by lot
-            realPrice =
-              if (T.unpack myFigi) ∈ [dollarFigi]
-                then currPrice
-                else currPrice * (lot re)
-            quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
+                Just (сUn, cNan) ->(fromIntegral сUn) + cNan
+                Nothing ->
+                  let myUnits = fromIntegral $ pos ^. O.currentPrice ^. C.units
+                      myNanos = fromIntegral $ pos ^. O.currentPrice ^. C.nano
+                      (cUn, cNan) = (myUnits, ( myNanos / 1000000000 :: Float ))
+                  in cUn * (fromIntegral (lot re)) + cNan
+            quantity  = fromIntegral $ pos ^. O.quantity ^. C.units :: Int
         pure $ Just (re, realPrice, quantity)
       Nothing -> pure Nothing) positions
   dollarPriceMb <- figiToLastPrice $ T.pack dollarFigi
   let dollarPrice = case dollarPriceMb of
-                      Just dp -> dp
-                      Nothing -> 90 -- fair?
+                      Just (u, n) -> (fromIntegral u) + n
+                      Nothing     -> 90.0 :: Float -- fair?
       reShares = catMaybes reSharesMb
       total = foldl (\summ (re, realPrice, quantity) ->
                   let sCurrency = T.unpack $ currency re
-                      rubPrice = if sCurrency == "usd"
-                                  then realPrice * dollarPrice
-                                  else realPrice
-                  in summ + rubPrice * quantity) 0 reShares
+                      rubPrice  = if sCurrency == "usd"
+                                   then realPrice * dollarPrice
+                                   else realPrice
+                      newToSumm = rubPrice * (fromIntegral quantity) :: Float
+                  in summ + newToSumm) 0.0 reShares
       maxQl = maximum $ map (\(_, _, q) -> length (show q)) reShares
   for_ reShares $ \(re, realPrice, quantity) -> do
     let sCurrency = T.unpack $ currency re
         quantityS = show quantity
         quantityP = maxQl - length quantityS
         quantityA = concat $ replicate quantityP " "
-        rubPrice = if sCurrency == "usd"
+        rubPrice  = if sCurrency == "usd"
             then realPrice * dollarPrice
             else realPrice
+        totalPrice = rubPrice * (fromIntegral quantity)
     putStrLn $ "T: " ++ ( T.unpack ( figi re ) ) --take 4 ( T.unpack ( ticker re ) )
           ++ "\tQ: " ++ quantityS ++ quantityA
-          ++ "\tP: " ++ show ( realPrice ) ++ " " ++ sCurrency
-          ++ "\tA: " ++ show ( rubPrice * quantity ) ++ " rub"
+          ++ "\tP: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
+          ++ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
           ++ "\tN: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
