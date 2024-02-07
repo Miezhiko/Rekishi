@@ -79,7 +79,7 @@ getAccountStuff g [acc] = do
             then realPrice * dollarPrice
             else realPrice
         totalPrice = rubPrice * (fromIntegral quantity)
-    putStrLn $ "T: " ++ ( T.unpack ( figi re ) ) --take 4 ( T.unpack ( ticker re ) )
+    putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
           ++ "\tQ: " ++ quantityS ++ quantityA
           ++ "\tP: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
           ++ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
