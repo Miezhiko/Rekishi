@@ -43,11 +43,7 @@ getAccountStuff g [acc] = do
     case reShare of
       Just re -> do
         let currPrice = pos ^. O.currentPrice ^. C.units
-            psNominal = mUnits $ nominal re
-            lotPrice  = (fromIntegral currPrice) * (lot re)
-            realPrice = if psNominal > 0
-                          then psNominal --lotPrice `div` psNominal
-                          else lotPrice
+            realPrice = (fromIntegral currPrice) * (lot re)
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
         pure $ Just (re, realPrice, quantity)
       Nothing -> pure Nothing) positions

@@ -33,8 +33,8 @@ import qualified Proto.Invest.Marketdata_Fields  as MD
 
 getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond]) --, [Future], [Etf]
 getBaseShares gc = do
-  myShares      <- shares     gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
-  myCurrencies  <- currencies gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
+  myShares      <- shares     gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
+  myCurrencies  <- currencies gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
   myBonds       <- bonds      gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
   -- myFutures     <- futures    gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
   -- myEtf         <- etfs       gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
@@ -102,12 +102,18 @@ loadBaseShares client = do
       -- (ee, etk, etr) = getReshares e
       reShares       = ss ++ cc ++ bb -- ++ ff ++ ee 
   writeIORef stateShares reShares
-  lastPrices <- runExceptT (getSharesLastPrices client reShares) >>= \case
+  -- this method has limit for 3000 elements
+  -- we use INSTRUMENT_STATUS_BASE for now
+  -- also we run it separately for currencies and shares
+  lastPricesS <- runExceptT (getSharesLastPrices client ss) >>= \case
+                  Left err -> error ∘ show $ err
+                  Right pr -> pure pr
+  lastPricesC <- runExceptT (getSharesLastPrices client cc) >>= \case
                   Left err -> error ∘ show $ err
                   Right pr -> pure pr
   let priceMap = map (\p -> ( p ^. MD.figi
                             , fromIntegral (p ^. MD.price ^. C.units) )
-                     ) lastPrices
+                     ) $ lastPricesS ++ lastPricesC
   writeIORef statePrices  $ M.fromList priceMap
   writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ) -- ++ ftk ++ etk
   writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ) -- ++ ftr ++ etr
