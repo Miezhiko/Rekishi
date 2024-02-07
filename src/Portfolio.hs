@@ -39,27 +39,47 @@ getAccountStuff g [acc] = do
   pf <- runGetPortfolio g pr
   let positions = pf ^. O.positions
   reSharesMb <- traverse (\pos -> do
-    reShare <- figiToReShare $ pos ^. O.figi
+    let myFigi = pos ^. O.figi
+    reShare <- figiToReShare myFigi
+    lsPrice <- figiToLastPrice myFigi
     case reShare of
       Just re -> do
-        let currPrice = pos ^. O.currentPrice ^. C.units
-            realPrice = (fromIntegral currPrice) * (lot re)
+        let currPrice =
+              case lsPrice of
+                Just p  -> p -- last price is more actual than current
+                Nothing -> fromIntegral $ pos ^. O.currentPrice ^. C.units
+            -- TODO: check if currency not multiply by lot
+            realPrice =
+              if (T.unpack myFigi) ∈ [dollarFigi]
+                then currPrice
+                else currPrice * (lot re)
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units
         pure $ Just (re, realPrice, quantity)
       Nothing -> pure Nothing) positions
-  let reShares = catMaybes reSharesMb
-      total = foldl (\summ (_, realPrice, quantity) ->
-                      summ + realPrice * quantity) 0 reShares
+  dollarPriceMb <- figiToLastPrice $ T.pack dollarFigi
+  let dollarPrice = case dollarPriceMb of
+                      Just dp -> dp
+                      Nothing -> 90 -- fair?
+      reShares = catMaybes reSharesMb
+      total = foldl (\summ (re, realPrice, quantity) ->
+                  let sCurrency = T.unpack $ currency re
+                      rubPrice = if sCurrency == "usd"
+                                  then realPrice * dollarPrice
+                                  else realPrice
+                  in summ + rubPrice * quantity) 0 reShares
       maxQl = maximum $ map (\(_, _, q) -> length (show q)) reShares
   for_ reShares $ \(re, realPrice, quantity) -> do
     let sCurrency = T.unpack $ currency re
         quantityS = show quantity
         quantityP = maxQl - length quantityS
-        quantityA = concat $ replicate quantityP " " 
-    putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
+        quantityA = concat $ replicate quantityP " "
+        rubPrice = if sCurrency == "usd"
+            then realPrice * dollarPrice
+            else realPrice
+    putStrLn $ "T: " ++ ( T.unpack ( figi re ) ) --take 4 ( T.unpack ( ticker re ) )
           ++ "\tQ: " ++ quantityS ++ quantityA
           ++ "\tP: " ++ show ( realPrice ) ++ " " ++ sCurrency
-          ++ "\tA: " ++ show ( realPrice * quantity ) ++ " " ++ sCurrency
+          ++ "\tA: " ++ show ( rubPrice * quantity ) ++ " rub"
           ++ "\tN: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]

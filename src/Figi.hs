@@ -5,7 +5,8 @@
   #-}
 
 module Figi
-  ( figiToReShare
+  ( figiToLastPrice
+  , figiToReShare
   , loadBaseShares
   , tickerToFigi
   ) where
@@ -131,3 +132,10 @@ tickerToFigi myTicker = do
   case M.lookup myTicker figis of
     Just ti -> pure ti
     Nothing -> pure $ T.pack( "Ticker: " ++ (T.unpack myTicker) )
+
+figiToLastPrice ∷ T.Text -> IO (Maybe Int)
+figiToLastPrice myFigi = do
+  prices <- readIORef statePrices
+  case M.lookup myFigi prices of
+    Just ps -> pure $ Just ps
+    Nothing -> pure Nothing
