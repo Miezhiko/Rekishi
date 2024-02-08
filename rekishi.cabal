@@ -1,5 +1,5 @@
 name:           rekishi
-version:        0.0.1.4
+version:        0.0.1.5
 category:       Finance
 author:         Miezhiko
 license:        GPLv3
@@ -11,6 +11,7 @@ executable rekishi
   other-modules:
     Types
     Base
+    Console
     Version
     Config
     State
@@ -33,6 +34,7 @@ executable rekishi
   build-depends:
       base
     , base-unicode-symbols
+    , async
     , containers
     , text
     , aeson
@@ -41,6 +43,8 @@ executable rekishi
     , tinkoff-invest-sdk
     , proto-lens
     , time
+    , ansi-terminal
+    , terminfo
   default-language: Haskell2010
   ghc-options:
     -Wall -threaded -rtsopts -with-rtsopts=-N

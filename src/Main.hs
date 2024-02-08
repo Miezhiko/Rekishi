@@ -7,6 +7,7 @@ module Main where
 
 import           Base
 import           Config                (Config (cfgToken), getCfg)
+import           Console
 import           Figi                  (loadBaseShares)
 import           Historical            (runHistorical)
 import           Portfolio             (runPortfolio)
@@ -56,7 +57,9 @@ withConfig = do
 runPortfolioExec ∷ IO ()
 runPortfolioExec = do
   client <- withConfig
+  progressThread <- startProgress "Loading base shares..."
   loadBaseShares client
+  finishProgress progressThread
   runPortfolio client
 
 runHistoricalExec ∷ IO ()
@@ -65,7 +68,9 @@ runHistoricalExec = withConfig >>= runHistorical
 runTickerExec ∷ String -> IO ()
 runTickerExec ticker = do
   client <- withConfig
+  progressThread <- startProgress "Loading base shares..."
   loadBaseShares client
+  finishProgress progressThread
   runTicker client ticker
 
 gett ∷ ∀ (μ :: Type -> Type). Monad μ => String -> Options -> μ Options

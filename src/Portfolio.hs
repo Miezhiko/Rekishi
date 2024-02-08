@@ -13,6 +13,8 @@ import           Data.Maybe                     (catMaybes)
 import           Data.ProtoLens.Message
 import qualified Data.Text                      as T
 
+import           System.Console.ANSI
+
 import           Invest.Client
 import           Invest.Service.Operations      (getPortfolio)
 import           Invest.Service.Users           (getAccounts)
@@ -79,11 +81,17 @@ getAccountStuff g [acc] = do
             then realPrice * dollarPrice
             else realPrice
         totalPrice = rubPrice * (fromIntegral quantity)
-    putStrLn $ "T: " ++ take 4 ( T.unpack ( ticker re ) )
-          ++ "\tQ: " ++ quantityS ++ quantityA
+    setSGR [ SetColor Foreground Vivid Cyan
+           , SetConsoleIntensity BoldIntensity ]
+    putStr $ take 4 ( T.unpack ( ticker re ) )
+    setSGR [ Reset ]
+    putStr $ "\tQ: " ++ quantityS ++ quantityA
           ++ "\tP: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
-          ++ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
-          ++ "\tN: " ++ T.unpack ( name re )
+    setSGR [ SetColor Foreground Vivid Green
+           , SetConsoleIntensity BoldIntensity ]
+    putStr $ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
+    setSGR [ Reset ]
+    putStrLn $ "\tN: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
 getAccountStuff g (x:_) = getAccountStuff g [x]
 
