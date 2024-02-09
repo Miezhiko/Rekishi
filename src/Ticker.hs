@@ -1,5 +1,6 @@
 module Ticker
   ( runTicker
+  , getCandlesWith
   ) where
 
 import           Base
@@ -7,7 +8,6 @@ import           Figi
 import           Types
 
 import           Data.Foldable                          (for_)
-import           Data.Int
 import           Data.ProtoLens.Message
 import qualified Data.Text                              as T
 import           Data.Time
@@ -28,14 +28,6 @@ runGetCandles client gcr =
     Left err -> error ∘ show $ err
     Right cn -> pure cn
 
-sinceEpoch ∷ UTCTime -> Int64
-sinceEpoch = floor ∘ nominalDiffTimeToSeconds
-                   ∘ utcTimeToPOSIXSeconds
-
-toTimestamp ∷ Int64 -> Timestamp
-toTimestamp s = build $ ( TS.seconds  .~ (s :: Int64) )
-                      ∘ ( TS.nanos    .~ (0 :: Int32) )
-
 getCandlesWith ∷ Timestamp -- from
               -> Timestamp -- to
               -> GrpcClient
@@ -53,7 +45,7 @@ getCandlesByTickerWith ∷ Timestamp -- from
                       -> Timestamp -- to
                       -> GrpcClient
                       -> String 
-                      -> IO (Maybe ([HistoricCandle], Int, T.Text))
+                      -> IO (Maybe ([HistoricCandle], T.Text))
 getCandlesByTickerWith tfrom tto g myTicker = do
   let tickerText = T.pack myTicker
   myFigi      <- tickerToFigi tickerText
@@ -61,7 +53,7 @@ getCandlesByTickerWith tfrom tto g myTicker = do
   case reShare of
     Just re -> do
       candles  <- getCandlesWith tfrom tto g myFigi
-      pure $ Just (candles, lot re, currency re)
+      pure $ Just (candles, currency re)
     Nothing -> pure Nothing
 
 runTickerWith ∷ Timestamp -- from
@@ -72,13 +64,15 @@ runTickerWith ∷ Timestamp -- from
 runTickerWith tfrom tto g myTicker = do
   maybeCandles <- getCandlesByTickerWith tfrom tto g myTicker
   case maybeCandles of
-    Just (cndls, lot64, curr) ->
+    Just (cndls, curr) ->
       for_ cndls $ \pos ->
-        let closePrice  = (fromIntegral (pos ^. MD.close ^. C.units)) * lot64
+        let myUnits     = fromIntegral $ pos ^. MD.close ^. C.units
+            myNanos     = fromIntegral $ pos ^. MD.close ^. C.nano
+            closePrice  = myUnits + ( myNanos / 1000000000 :: Float )
             timeSeconds = pos ^. MD.time ^. TS.seconds
             time        = posixSecondsToUTCTime (fromIntegral timeSeconds)
         in putStrLn $ show (utctDay time) ++ ": "
-                  ++ show closePrice ++ " " ++ (T.unpack curr)
+                   ++ show closePrice ++ " " ++ (T.unpack curr)
     Nothing -> putStrLn "No reshare found"
 
 runTicker ∷ GrpcClient -> String -> IO ()
