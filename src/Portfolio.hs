@@ -112,6 +112,7 @@ getAccountStuff g [acc] = do
                   in ( summ + newToSumm 
                      , summd + diffPrice) ) (0.0, 0.0) reShares
       maxQl = maximum $ map (\(_, _, _, q) -> length (show q)) reShares
+      maxOl = maximum $ map (\(_, _, y, _) -> length (show y)) reShares
 
   for_ reShares $ \(re, realPrice, yPice, quantity) -> do
     let sCurrency = T.unpack $ currency re
@@ -122,7 +123,7 @@ getAccountStuff g [acc] = do
         oldpS = if yPice == 0
                   then "NO TRADE"
                   else printf "%.2f" yPice
-        oldpP = maxQl - length oldpS
+        oldpP = maxOl - length oldpS
         oldpA = concat $ replicate oldpP " "
 
         rubPrice  = if sCurrency == "usd"
@@ -143,8 +144,8 @@ getAccountStuff g [acc] = do
     putStr $ take 4 ( T.unpack ( ticker re ) )
     setSGR [ Reset ]
     putStr $ "\tQ: " ++ quantityS ++ quantityA
-          ++ "\tO: " ++ oldpS ++ oldpA
-          ++ "\tP: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
+          ++ " O: " ++ oldpS ++ oldpA
+          ++ " P: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
     setSGR [ SetColor Foreground Vivid White
            , SetConsoleIntensity BoldIntensity ]
     putStr $ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
