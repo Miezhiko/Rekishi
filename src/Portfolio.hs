@@ -148,7 +148,7 @@ getAccountStuff g [acc] = do
     setSGR [ SetColor Foreground Vivid White
            , SetConsoleIntensity BoldIntensity ]
     putStr $ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
-    if diffPrice > 0
+    if diffPrice >= 0
       then do
         setSGR [ SetColor Foreground Vivid Green
                , SetConsoleIntensity BoldIntensity ]
@@ -161,7 +161,7 @@ getAccountStuff g [acc] = do
     putStrLn $ "\tN: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
   putStr "Today: "
-  if dtotal > 0
+  if dtotal >= 0
       then do
         setSGR [ SetColor Foreground Vivid Green
                , SetConsoleIntensity BoldIntensity ]
