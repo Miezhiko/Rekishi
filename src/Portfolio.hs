@@ -112,7 +112,7 @@ getAccountStuff g [acc] = do
                   in ( summ + newToSumm 
                      , summd + diffPrice) ) (0.0, 0.0) reShares
       maxQl = maximum $ map (\(_, _, _, q) -> length (show q)) reShares
-      maxOl = maximum $ map (\(_, _, y, _) -> length (show y)) reShares
+      maxOl = maximum $ map (\(_, _, y, _) -> length (printf "%.2f" y :: String)) reShares
 
   for_ reShares $ \(re, realPrice, yPice, quantity) -> do
     let sCurrency = T.unpack $ currency re
@@ -121,7 +121,7 @@ getAccountStuff g [acc] = do
         quantityA = concat $ replicate quantityP " "
 
         oldpS = if yPice == 0
-                  then "NO TRADE"
+                  then "-"
                   else printf "%.2f" yPice
         oldpP = maxOl - length oldpS
         oldpA = concat $ replicate oldpP " "
