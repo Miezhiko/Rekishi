@@ -53,8 +53,12 @@ getPriceWithCandles (x:_) = getPriceWithCandles [x] -- should be single
 getYesterdayPrice ∷ GrpcClient -> T.Text -> IO Float
 getYesterdayPrice g myFigi = do
   now <- getCurrentTime
-  let unixTime    = sinceEpoch now
-      day2Secs    = 60 * 60 * 24 * 2
+  let weekday     = dayOfWeek $ utctDay now
+      unixTime    = sinceEpoch now
+      day2Secs    = case weekday of
+                     Monday -> 60 * 60 * 24 * 4
+                     Sunday -> 60 * 60 * 24 * 3
+                     _      -> 60 * 60 * 24 * 2
       day1Secs    = 60 * 60 * 24 * 1
       tfrom       = toTimestamp $ unixTime - day2Secs
       tto         = toTimestamp $ unixTime - day1Secs
