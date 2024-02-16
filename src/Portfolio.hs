@@ -10,6 +10,7 @@ import           Types
 import           Text.Printf
 
 import           Data.Foldable                  (for_)
+import qualified Data.Map                       as M
 import           Data.Maybe                     (catMaybes)
 import           Data.ProtoLens.Message
 import qualified Data.Text                      as T
@@ -99,7 +100,7 @@ getAccountStuff g [acc] = do
                       Just (u, n) -> (fromIntegral u) + n
                       Nothing     -> 90.0 :: Float -- fair?
       reShares = catMaybes reSharesMb
-      (total, dtotal) = foldl (\(summ, summd) (re, realPrice, yPice, quantity) ->
+      (total, dtotal, prices) = foldl (\(summ, summd, dp) (re, realPrice, yPice, quantity) ->
                   let sCurrency = T.unpack $ currency re
                       rubPrice  = if sCurrency == "usd"
                                    then realPrice * dollarPrice
@@ -114,9 +115,16 @@ getAccountStuff g [acc] = do
                           then 0
                           else newToSumm - totalyPrice
                   in ( summ + newToSumm 
-                     , summd + diffPrice) ) (0.0, 0.0) reShares
+                     , summd + diffPrice
+                     , (M.insert (figi re)
+                                 (newToSumm, diffPrice) dp) ) )
+                      ( 0.0, 0.0
+                      , M.empty :: M.Map T.Text (Float, Float) ) reShares
       maxQl = maximum $ map (\(_, _, _, q) -> length (show q)) reShares
       maxOl = maximum $ map (\(_, _, y, _) -> length (printf "%.2f" y :: String)) reShares
+      maxRl = maximum $ map (\(_, r, _, _) -> length (printf "%.2f" r :: String)) reShares
+      maxTl = maximum $ map (\(_, (t, _))  -> length (show ( round t :: Int ))) $ M.toList prices
+      maxDl = maximum $ map (\(_, (_, d))  -> length (show ( round d :: Int ))) $ M.toList prices
 
   for_ reShares $ \(re, realPrice, yPice, quantity) -> do
     let sCurrency = T.unpack $ currency re
@@ -130,18 +138,27 @@ getAccountStuff g [acc] = do
         oldpP = maxOl - length oldpS
         oldpA = concat $ replicate oldpP " "
 
-        rubPrice  = if sCurrency == "usd"
-            then realPrice * dollarPrice
-            else realPrice
-        totalPrice = rubPrice * (fromIntegral quantity)
-        rubyPrice  = if sCurrency == "usd"
-                      then yPice * dollarPrice
-                      else yPice
-        totalyPrice = rubyPrice * (fromIntegral quantity)
-        diffPrice   =
-          if totalyPrice == 0
-            then 0
-            else totalPrice - totalyPrice
+        newpS = if realPrice == 0
+                  then "-"
+                  else printf "%.2f" realPrice
+        newpP = maxRl - length newpS
+        newpA = concat $ replicate newpP " "
+
+        (totalPrice, diffPrice) =
+          case M.lookup (figi re) prices of
+            Just (n, d)  -> (n, d)
+            Nothing      -> (0, 0)
+
+        aprsS = show ( round totalPrice :: Int )
+        aprsP = maxTl - length aprsS
+        aprsA = concat $ replicate aprsP " "
+
+        diffI = round diffPrice :: Int
+        diffS = if diffI >= 0
+                  then "+" ++ show diffI
+                  else show diffI
+        diffP = (maxDl + 1) - length diffS
+        diffA = concat $ replicate diffP " "
 
     setSGR [ SetColor Foreground Vivid Cyan
            , SetConsoleIntensity BoldIntensity ]
@@ -149,21 +166,20 @@ getAccountStuff g [acc] = do
     setSGR [ Reset ]
     putStr $ "\tQ: " ++ quantityS ++ quantityA
           ++ " O: " ++ oldpS ++ oldpA
-          ++ " P: " ++ printf "%.2f" ( realPrice ) ++ " " ++ sCurrency
+          ++ " P: " ++ newpS ++ " " ++ sCurrency ++ newpA
     setSGR [ SetColor Foreground Vivid White
            , SetConsoleIntensity BoldIntensity ]
-    putStr $ "\tA: " ++ show ( round totalPrice :: Int ) ++ " rub"
+    putStr $ " A: " ++ aprsS ++ " rub" ++ aprsA
     if diffPrice >= 0
       then do
         setSGR [ SetColor Foreground Vivid Green
                , SetConsoleIntensity BoldIntensity ]
-        putStr $ "\tD: +" ++ show ( round diffPrice :: Int )
       else do
         setSGR [ SetColor Foreground Vivid Red
                , SetConsoleIntensity BoldIntensity ]
-        putStr $ "\tD: " ++ show ( round diffPrice :: Int )
+    putStr $ " D: " ++ diffS ++ diffA
     setSGR [ Reset ]
-    putStrLn $ "\tN: " ++ T.unpack ( name re )
+    putStrLn $ " N: " ++ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
   putStr "Today: "
   if dtotal >= 0
