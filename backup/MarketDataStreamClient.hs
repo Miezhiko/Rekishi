@@ -9,12 +9,12 @@ import           Config                          (Config (cfgToken))
 import           Control.Concurrent              (forkIO, threadDelay)
 import           Control.Monad                   (void)
 
-import           Invest.Client
-import           Invest.Client.Helpers
-import           Invest.Service.MarketDataStream
+import           Client
+import           Client.Helpers
+import           Service.MarketDataStream
 
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields  as MD
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields  as MD
 
 runClient ∷ ClientConfig -> IO GrpcClient
 runClient cnfg = runExceptT (initGrpcClient cnfg) >>= \case

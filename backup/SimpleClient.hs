@@ -1,17 +1,17 @@
 module SimpleClient where
 
-import           Config                          (Config(cfgToken))
+import           Config                   (Config (cfgToken))
 
-import           Control.Monad                   (void)
+import           Control.Monad            (void)
 
-import           Invest.Client
-import           Invest.Service.Instruments      (shares)
-import           Invest.Service.MarketData
+import           Client
+import           Service.Instruments      (shares)
+import           Service.MarketData
 
-import           Proto.Invest.Instruments
-import qualified Proto.Invest.Instruments_Fields as I
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields  as MD
+import           Proto.Instruments
+import qualified Proto.Instruments_Fields as I
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields  as MD
 
 getBaseShares ∷ GrpcClient -> GrpcIO [Share]
 getBaseShares gc =

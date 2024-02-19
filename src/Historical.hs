@@ -4,16 +4,16 @@ module Historical
 
 import           Base
 
-import           Data.Foldable                          (for_)
+import           Data.Foldable           (for_)
 import           Data.ProtoLens.Message
-import qualified Data.Text                              as T
+import qualified Data.Text               as T
 import           Data.Time
 
-import           Invest.Client
-import           Invest.Service.MarketData
+import           Client
+import           Service.MarketData
 
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields         as MD
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields as MD
 
 runGetCandles ∷ GrpcClient -> GetCandlesRequest -> IO [HistoricCandle]
 runGetCandles client gcr =

@@ -15,22 +15,22 @@ import           Base
 import           State
 import           Types
 
-import qualified Data.Map                        as M
+import qualified Data.Map                 as M
 import           Data.ProtoLens.Message
-import qualified Data.Text                       as T
+import qualified Data.Text                as T
 
-import qualified Data.ProtoLens.Field            as F
+import qualified Data.ProtoLens.Field     as F
 
-import           Invest.Client
-import           Invest.Service.Instruments      (bonds, currencies, shares, futures, etfs)
-import           Invest.Service.MarketData       (getLastPrices)
+import           Client
+import           Service.Instruments      (bonds, currencies, etfs, futures, shares)
+import           Service.MarketData       (getLastPrices)
 
-import           Proto.Invest.Common
-import qualified Proto.Invest.Common_Fields      as C
-import           Proto.Invest.Instruments
-import qualified Proto.Invest.Instruments_Fields as I
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields  as MD
+import           Proto.Common
+import qualified Proto.Common_Fields      as C
+import           Proto.Instruments
+import qualified Proto.Instruments_Fields as I
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields  as MD
 
 getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond], [Future], [Etf])
 getBaseShares gc = do

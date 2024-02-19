@@ -4,30 +4,30 @@ module Portfolio
 
 import           Base
 import           Figi
-import           Ticker                         (getCandlesWith)
+import           Ticker                  (getCandlesWith)
 import           Types
 
 import           Text.Printf
 
-import           Data.Foldable                  (for_)
-import qualified Data.Map                       as M
-import           Data.Maybe                     (catMaybes)
+import           Data.Foldable           (for_)
+import qualified Data.Map                as M
+import           Data.Maybe              (catMaybes)
 import           Data.ProtoLens.Message
-import qualified Data.Text                      as T
+import qualified Data.Text               as T
 import           Data.Time
 
 import           System.Console.ANSI
 
-import           Invest.Client
-import           Invest.Service.Operations      (getPortfolio)
-import           Invest.Service.Users           (getAccounts)
+import           Client
+import           Service.Operations      (getPortfolio)
+import           Service.Users           (getAccounts)
 
-import qualified Proto.Invest.Common_Fields     as C
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields as MD
-import           Proto.Invest.Operations
-import qualified Proto.Invest.Operations_Fields as O
-import           Proto.Invest.Users
+import qualified Proto.Common_Fields     as C
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields as MD
+import           Proto.Operations
+import qualified Proto.Operations_Fields as O
+import           Proto.Users
 
 runGetAccounts ∷ GrpcClient -> IO [Account]
 runGetAccounts client = runExceptT (getAccounts client) >>= \case
@@ -146,8 +146,8 @@ getAccountStuff g [acc] = do
 
         (totalPrice, diffPrice) =
           case M.lookup (figi re) prices of
-            Just (n, d)  -> (n, d)
-            Nothing      -> (0, 0)
+            Just (n, d) -> (n, d)
+            Nothing     -> (0, 0)
 
         aprsS = show ( round totalPrice :: Int )
         aprsP = maxTl - length aprsS

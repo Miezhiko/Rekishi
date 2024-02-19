@@ -14,7 +14,7 @@ import           Data.Int
 import           Data.Time
 import           Data.Time.Clock.POSIX
 
-import           Invest.Client
+import           Client
 
 import           Proto.Google.Protobuf.Timestamp
 import qualified Proto.Google.Protobuf.Timestamp_Fields as TS

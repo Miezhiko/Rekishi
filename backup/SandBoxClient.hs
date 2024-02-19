@@ -1,12 +1,15 @@
 module SandBoxClient where
 
-import           Config                          (Config(cfgToken))
+import           Config                    (Config (cfgToken))
 
 import           Control.Monad             (void)
+
 import           Data.Text                 (Text)
-import           Invest.Client
-import           Invest.Service.Sandbox
-import           Proto.Invest.Users_Fields as U
+
+import           Client
+import           Service.Sandbox
+
+import           Proto.Users_Fields as U
 
 -- Creates new sandbox account if there is no one
 getSandBoxAccountId ∷ GrpcClient -> GrpcIO Text

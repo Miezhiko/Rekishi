@@ -20,7 +20,7 @@ import           System.Console.GetOpt
 import           System.Environment    (getArgs)
 import           System.Exit
 
-import           Invest.Client
+import           Client
 
 main ∷ IO ()
 main = do (actions, _, _) <- getOpt RequireOrder options <$> getArgs

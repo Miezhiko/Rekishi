@@ -1,6 +1,6 @@
 module Ticker
-  ( runTicker
-  , getCandlesWith
+  ( getCandlesWith
+  , runTicker
   ) where
 
 import           Base
@@ -13,14 +13,14 @@ import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Clock.POSIX
 
-import           Invest.Client
-import           Invest.Service.MarketData
+import           Client
+import           Service.MarketData
 
+import qualified Proto.Common_Fields                    as C
 import           Proto.Google.Protobuf.Timestamp
 import qualified Proto.Google.Protobuf.Timestamp_Fields as TS
-import qualified Proto.Invest.Common_Fields             as C
-import           Proto.Invest.Marketdata
-import qualified Proto.Invest.Marketdata_Fields         as MD
+import           Proto.Marketdata
+import qualified Proto.Marketdata_Fields                as MD
 
 runGetCandles ∷ GrpcClient -> GetCandlesRequest -> IO [HistoricCandle]
 runGetCandles client gcr =
