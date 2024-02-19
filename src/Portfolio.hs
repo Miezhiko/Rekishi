@@ -164,12 +164,12 @@ getAccountStuff g [acc] = do
            , SetConsoleIntensity BoldIntensity ]
     putStr $ take 4 ( T.unpack ( ticker re ) )
     setSGR [ Reset ]
-    putStr $ "\tQ: " ++ quantityS ++ quantityA
-          ++ " O: " ++ oldpS ++ oldpA
-          ++ " P: " ++ newpS ++ " " ++ sCurrency ++ newpA
+    putStr $ " " ++ quantityS ++ quantityA
+          ++ " " ++ oldpS ++ oldpA
+          ++ " -> " ++ newpS ++ " " ++ sCurrency ++ newpA
     setSGR [ SetColor Foreground Vivid White
            , SetConsoleIntensity BoldIntensity ]
-    putStr $ " A: " ++ aprsS ++ " rub" ++ aprsA
+    putStr $ " [ " ++ aprsS ++ " " ++ aprsA
     if diffPrice >= 0
       then do
         setSGR [ SetColor Foreground Vivid Green
@@ -177,9 +177,12 @@ getAccountStuff g [acc] = do
       else do
         setSGR [ SetColor Foreground Vivid Red
                , SetConsoleIntensity BoldIntensity ]
-    putStr $ " D: " ++ diffS ++ diffA
+    putStr $ diffS ++ diffA
+    setSGR [ SetColor Foreground Vivid White
+           , SetConsoleIntensity BoldIntensity ]
+    putStr "] "
     setSGR [ Reset ]
-    putStrLn $ " N: " ++ T.unpack ( name re )
+    putStrLn $ T.unpack ( name re )
   putStrLn $ "Total Cap: " ++ show total
   putStr "Today: "
   if dtotal >= 0
