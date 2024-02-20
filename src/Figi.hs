@@ -14,6 +14,7 @@ module Figi
   ) where
 
 import           Base
+import           Console
 import           State
 import           Types
 
@@ -101,6 +102,7 @@ getSharesLastPrices gc myShares = toLastPrices (map figi myShares)
 
 loadBaseShares ∷ GrpcClient -> IO SharesState
 loadBaseShares client = do
+  progressThread <- startProgress "Loading base shares..."
   (s, c, b, f, e) <- runExceptT (getBaseShares client) >>= \case
     Left err -> error ∘ show $ err
     Right sh -> pure sh
@@ -132,6 +134,7 @@ loadBaseShares client = do
   writeIORef statePrices mPriceMap 
   writeIORef stateTickers mTickers
   writeIORef stateFigis mFigis
+  finishProgress progressThread
   pure $ SharesState reShares mTickers mFigis mPriceMap
 
 figiToReShare ∷ T.Text -> IO (Maybe ReShare)

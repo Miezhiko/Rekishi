@@ -7,7 +7,6 @@ module Main where
 
 import           Base
 import           Config                (Config (cfgToken), getCfg)
-import           Console
 import           Figi                  (loadBaseShares, restoreCache, storeCache)
 import           Historical            (runHistorical)
 import           Portfolio             (runPortfolio)
@@ -62,13 +61,10 @@ getRCachePath = (</> "rekishi.cache") <$> getHomeDirectory
 
 runPortfolioExec ∷ IO ()
 runPortfolioExec =
-  getRCachePath >>= \rCachePath -> do
-    -- cacheExists <- doesFileExist rCachePath
+  getRCachePath >>= \rCachePath ->
     withBinaryFile rCachePath ReadWriteMode $ \h -> do
       client <- withConfig
-      progressThread <- startProgress "Loading base shares..."
       mySharesState <- loadBaseShares client
-      finishProgress progressThread
       runPortfolio client
       storeCache h mySharesState
 
@@ -77,13 +73,10 @@ runHistoricalExec = withConfig >>= runHistorical
 
 runTickerExec ∷ String -> IO ()
 runTickerExec ticker =
-  getRCachePath >>= \rCachePath -> do
-    -- cacheExists <- doesFileExist rCachePath
+  getRCachePath >>= \rCachePath ->
     withBinaryFile rCachePath ReadWriteMode $ \h -> do
       client <- withConfig
-      progressThread <- startProgress "Loading base shares..."
       restoreCache client h
-      finishProgress progressThread
       runTicker client ticker
 
 gett ∷ ∀ (μ :: Type -> Type). Monad μ => String -> Options -> μ Options
