@@ -1,6 +1,5 @@
 module State
-  ( module Export
-  , stateFigis
+  ( stateFigis
   , statePrices
   , stateShares
   , stateTickers
@@ -10,8 +9,6 @@ import           Types
 
 import           System.IO.Unsafe
 
-import           Data.Int         as Export
-import           Data.IORef       as Export
 import qualified Data.Map         as M
 import qualified Data.Text        as T
 

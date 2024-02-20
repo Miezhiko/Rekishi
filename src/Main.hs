@@ -8,7 +8,7 @@ module Main where
 import           Base
 import           Config                (Config (cfgToken), getCfg)
 import           Console
-import           Figi                  (loadBaseShares)
+import           Figi                  (loadBaseShares, restoreCache, storeCache)
 import           Historical            (runHistorical)
 import           Portfolio             (runPortfolio)
 import           Ticker                (runTicker)
@@ -17,8 +17,11 @@ import           Version
 import           Data.Kind
 
 import           System.Console.GetOpt
+import           System.Directory
 import           System.Environment    (getArgs)
 import           System.Exit
+import           System.FilePath       ((</>))
+import           System.IO
 
 import           Client
 
@@ -53,25 +56,35 @@ withConfig = do
     appName = Nothing
   }
   runClient config
-  
+
+getRCachePath ∷ IO FilePath
+getRCachePath = (</> "rekishi.cache") <$> getHomeDirectory
+
 runPortfolioExec ∷ IO ()
-runPortfolioExec = do
-  client <- withConfig
-  progressThread <- startProgress "Loading base shares..."
-  loadBaseShares client
-  finishProgress progressThread
-  runPortfolio client
+runPortfolioExec =
+  getRCachePath >>= \rCachePath -> do
+    -- cacheExists <- doesFileExist rCachePath
+    withBinaryFile rCachePath ReadWriteMode $ \h -> do
+      client <- withConfig
+      progressThread <- startProgress "Loading base shares..."
+      mySharesState <- loadBaseShares client
+      finishProgress progressThread
+      runPortfolio client
+      storeCache h mySharesState
 
 runHistoricalExec ∷ IO ()
 runHistoricalExec = withConfig >>= runHistorical
 
 runTickerExec ∷ String -> IO ()
-runTickerExec ticker = do
-  client <- withConfig
-  progressThread <- startProgress "Loading base shares..."
-  loadBaseShares client
-  finishProgress progressThread
-  runTicker client ticker
+runTickerExec ticker =
+  getRCachePath >>= \rCachePath -> do
+    -- cacheExists <- doesFileExist rCachePath
+    withBinaryFile rCachePath ReadWriteMode $ \h -> do
+      client <- withConfig
+      progressThread <- startProgress "Loading base shares..."
+      restoreCache client h
+      finishProgress progressThread
+      runTicker client ticker
 
 gett ∷ ∀ (μ :: Type -> Type). Monad μ => String -> Options -> μ Options
 gett arg ο = pure ο { optRekishi = runTickerExec arg }

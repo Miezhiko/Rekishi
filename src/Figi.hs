@@ -8,6 +8,8 @@ module Figi
   ( figiToLastPrice
   , figiToReShare
   , loadBaseShares
+  , restoreCache
+  , storeCache
   , tickerToFigi
   ) where
 
@@ -15,11 +17,15 @@ import           Base
 import           State
 import           Types
 
+import           Data.Binary
+import qualified Data.ByteString.Lazy     as BL
 import qualified Data.Map                 as M
+import qualified Data.ProtoLens.Field     as F
 import           Data.ProtoLens.Message
 import qualified Data.Text                as T
 
-import qualified Data.ProtoLens.Field     as F
+import           System.IO
+
 
 import           Client
 import           Service.Instruments      (bonds, currencies, etfs, futures, shares)
@@ -93,7 +99,7 @@ getSharesLastPrices ∷ GrpcClient -> [ReShare] -> GrpcIO [LastPrice]
 getSharesLastPrices gc myShares = toLastPrices (map figi myShares)
   where toLastPrices figis = getLastPrices gc (defMessage & MD.figi .~ figis)
 
-loadBaseShares ∷ GrpcClient -> IO ()
+loadBaseShares ∷ GrpcClient -> IO SharesState
 loadBaseShares client = do
   (s, c, b, f, e) <- runExceptT (getBaseShares client) >>= \case
     Left err -> error ∘ show $ err
@@ -120,9 +126,13 @@ loadBaseShares client = do
                       myNanos = fromIntegral $ myPrice ^. C.nano
                       untiNan = (myUnits, (( myNanos / 1000000000 ) :: Float))
                   in ( p ^. MD.figi, untiNan ) ) $ lastPricesS ++ lastPricesC
-  writeIORef statePrices  $ M.fromList priceMap
-  writeIORef stateTickers $ M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
-  writeIORef stateFigis   $ M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
+      mPriceMap = M.fromList priceMap
+      mTickers  = M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
+      mFigis    = M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
+  writeIORef statePrices mPriceMap 
+  writeIORef stateTickers mTickers
+  writeIORef stateFigis mFigis
+  pure $ SharesState reShares mTickers mFigis mPriceMap
 
 figiToReShare ∷ T.Text -> IO (Maybe ReShare)
 figiToReShare myFigi = do
@@ -144,3 +154,18 @@ figiToLastPrice myFigi = do
   case M.lookup myFigi prices of
     Just ps -> pure $ Just ps
     Nothing -> pure Nothing
+
+storeCache ∷ Handle -> SharesState -> IO ()
+storeCache h = BL.hPut h ∘ encode
+
+restoreCache ∷ GrpcClient -> Handle -> IO ()
+restoreCache g h = BL.hGetContents h >>= \c -> do
+  cache <-
+    case decodeOrFail c of
+      Left (_,_,err) -> do putStrLn $ "Failed to decode cache: " ++ err
+                           loadBaseShares g
+      Right (_,_,pc) -> pure pc
+  writeIORef stateShares  $ fstateShares cache
+  writeIORef statePrices  $ fstatePrices cache 
+  writeIORef stateTickers $ fstateTickers cache
+  writeIORef stateFigis   $ fstateFigis cache
