@@ -22,9 +22,8 @@ data ReShare
       , currency              :: T.Text
       , dlong                 :: ReQuotation
       , dshort                :: ReQuotation
-        -- nominal feels likecompletely useless value
-        -- might drop later
-        -- , nominal               :: ReMoneyValue
+      , minPriceIncrement     :: ReQuotation
+      , nominal               :: ReMoneyValue
       , name                  :: T.Text
       , apiTradeAvailableFlag :: Bool
       }

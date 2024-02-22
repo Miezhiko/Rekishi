@@ -28,7 +28,9 @@ import qualified Data.Text                as T
 import           System.IO
 
 import           Client
-import           Service.Instruments      (bonds, currencies, etfs, futures, shares)
+
+-- not sure about etfs and futures for now
+import           Service.Instruments      (bonds, currencies, shares)
 import           Service.MarketData       (getLastPrices)
 
 import           Proto.Common
@@ -38,14 +40,14 @@ import qualified Proto.Instruments_Fields as I
 import           Proto.Marketdata
 import qualified Proto.Marketdata_Fields  as MD
 
-getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond], [Future], [Etf])
+getBaseShares ∷ GrpcClient -> GrpcIO ([Share], [Currency], [Bond]) --, [Future], [Etf])
 getBaseShares gc = do
   myShares      <- shares     gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
   myCurrencies  <- currencies gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
   myBonds       <- bonds      gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
-  myFutures     <- futures    gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
-  myEtf         <- etfs       gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
-  pure $ (myShares, myCurrencies, myBonds, myFutures, myEtf)
+  -- myFutures     <- futures    gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_BASE)
+  -- myEtf         <- etfs       gc (defMessage & I.instrumentStatus .~ INSTRUMENT_STATUS_ALL)
+  pure $ (myShares, myCurrencies, myBonds) -- , myFutures, myEtf)
 
 getReshare ∷ ∀ r. (
   (F.HasField r "figi" T.Text),
@@ -55,13 +57,15 @@ getReshare ∷ ∀ r. (
   (F.HasField r "currency" T.Text),
   (F.HasField r "dlong" Quotation),
   (F.HasField r "dshort" Quotation),
-  -- (F.HasField r "nominal" MoneyValue),
+  (F.HasField r "minPriceIncrement" Quotation),
+  (F.HasField r "nominal" MoneyValue),
   (F.HasField r "apiTradeAvailableFlag" Bool)
   ) => r -> ReShare
 getReshare s =
   let sLong     = s ^. I.dlong
       sShort    = s ^. I.dshort
-      -- sNominal  = s ^. I.nominal
+      sPrInc    = s ^. I.minPriceIncrement
+      sNominal  = s ^. I.nominal
   in ReShare  ( s ^. I.figi                   )
               ( s ^. I.ticker                 )
               ( fromIntegral ( s ^. I.lot )   )
@@ -70,11 +74,11 @@ getReshare s =
                             ( fromIntegral ( sLong ^. C.nano )      ) )
               ( ReQuotation ( fromIntegral ( sShort ^. C.units )    )
                             ( fromIntegral ( sShort ^. C.nano )     ) )
-                            {-
+              ( ReQuotation ( fromIntegral ( sPrInc ^. C.units )    )
+                            ( fromIntegral ( sPrInc ^. C.nano )     ) )
               ( ReMoneyValue ( sNominal ^. C.currency               )
                              ( fromIntegral ( sNominal ^. C.units ) )
                              ( fromIntegral ( sNominal ^. C.nano )  ) )
-                             -}
               ( s ^. I.name                   )
               ( s ^. I.apiTradeAvailableFlag  )
 
@@ -86,7 +90,8 @@ getReshares ∷ ∀ r. (
   (F.HasField r "currency" T.Text),
   (F.HasField r "dlong" Quotation),
   (F.HasField r "dshort" Quotation),
-  -- (F.HasField r "nominal" MoneyValue),
+  (F.HasField r "minPriceIncrement" Quotation),
+  (F.HasField r "nominal" MoneyValue),
   (F.HasField r "apiTradeAvailableFlag" Bool)
   ) => [r] -> ([ReShare], [(T.Text, ReShare)], [(T.Text, T.Text)])
 getReshares xs =
@@ -102,15 +107,15 @@ getSharesLastPrices gc myShares = toLastPrices (map figi myShares)
 loadBaseShares ∷ GrpcClient -> IO SharesState
 loadBaseShares client = do
   progressThread <- startProgress "Loading base shares..."
-  (s, c, b, f, e) <- runExceptT (getBaseShares client) >>= \case
+  (s, c, b) <- runExceptT (getBaseShares client) >>= \case
     Left err -> error ∘ show $ err
     Right sh -> pure sh
   let (ss, stk, str) = getReshares s
       (cc, ctk, ctr) = getReshares c
       (bb, btk, btr) = getReshares b
-      (ff, ftk, ftr) = getReshares f
-      (ee, etk, etr) = getReshares e
-      reShares       = ss ++ cc ++ bb ++ ff ++ ee 
+      --(ff, ftk, ftr) = getReshares f
+      --(ee, etk, etr) = getReshares e
+      reShares       = ss ++ cc ++ bb -- ++ ff ++ ee
   writeIORef stateShares reShares
   -- this method has limit for 3000 elements
   -- we use INSTRUMENT_STATUS_BASE for now
@@ -128,8 +133,8 @@ loadBaseShares client = do
                       untiNan = (myUnits, (( myNanos / 1000000000 ) :: Float))
                   in ( p ^. MD.figi, untiNan ) ) $ lastPricesS ++ lastPricesC
       mPriceMap = M.fromList priceMap
-      mTickers  = M.fromList ( stk ++ ctk ++ btk ++ ftk ++ etk )
-      mFigis    = M.fromList ( str ++ ctr ++ btr ++ ftr ++ etr )
+      mTickers  = M.fromList ( stk ++ ctk ++ btk ) -- ++ ftk ++ etk )
+      mFigis    = M.fromList ( str ++ ctr ++ btr ) -- ++ ftr ++ etr )
   writeIORef statePrices mPriceMap 
   writeIORef stateTickers mTickers
   writeIORef stateFigis mFigis

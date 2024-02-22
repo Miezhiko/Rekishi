@@ -72,13 +72,25 @@ getAccountStuff g [acc] = do
   let accId = acc ^. O.id
       pr    = build $ O.accountId .~ accId
   pf <- runGetPortfolio g pr
+  dollarPriceMb <- figiToLastPrice $ T.pack dollarFigi
+  cnyPriceMb    <- figiToLastPrice $ T.pack cnyFigi
+  let dollarPrice = case dollarPriceMb of
+                    Just (u, n) -> (fromIntegral u) + n
+                    Nothing     -> 92.0 :: Float -- fair?
+      cnyPrice    = case cnyPriceMb of
+                      Just (u, n) -> (fromIntegral u) + n
+                      Nothing     -> 13.0 :: Float -- fair?
+      convPr c pp = case c of
+                      "usd" -> pp * dollarPrice
+                      "cny" -> pp * cnyPrice
+                      _     -> pp
 
   reSharesMb <- traverse (\pos -> do
     let myFigi = pos ^. O.figi
         iType  = pos ^. O.instrumentType
-    reShare <- figiToReShare myFigi
-    lsPrice <- figiToLastPrice myFigi
-    yPice   <- getYesterdayPrice g myFigi
+    reShare       <- figiToReShare myFigi
+    lsPrice       <- figiToLastPrice myFigi
+    yPice         <- getYesterdayPrice g myFigi
     case reShare of
       Just re -> do
         let realPrice =
@@ -90,7 +102,7 @@ getAccountStuff g [acc] = do
                   in myUnits + ( myNanos / 1000000000 :: Float )
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units :: Int
             yPrircCor = if (T.unpack iType) == "bond"
-              then
+              then 
                 -- TODO mystcal, I can't understand
                 -- must learn bond prices somehwere
                 if (T.unpack myFigi) == "TCSS0A105A95"
@@ -100,24 +112,11 @@ getAccountStuff g [acc] = do
         pure $ Just (re, realPrice, yPrircCor, quantity)
       Nothing -> pure Nothing) $ pf ^. O.positions
 
-  dollarPriceMb <- figiToLastPrice $ T.pack dollarFigi
-  cnyPriceMb    <- figiToLastPrice $ T.pack cnyFigi
-  let dollarPrice = case dollarPriceMb of
-                      Just (u, n) -> (fromIntegral u) + n
-                      Nothing     -> 92.0 :: Float -- fair?
-      cnyPrice    = case cnyPriceMb of
-                      Just (u, n) -> (fromIntegral u) + n
-                      Nothing     -> 13.0 :: Float -- fair?
-      reShares = catMaybes reSharesMb
+  let reShares = catMaybes reSharesMb
       (total, dtotal, prices) = foldl (\(summ, summd, dp) (re, realPrice, yPice, quantity) ->
                   let sCurrency = T.unpack $ currency re
-                      convPr pp =
-                        case sCurrency of
-                          "usd" -> pp * dollarPrice
-                          "cny" -> pp * cnyPrice
-                          _     -> pp
-                      rubPrice  = convPr realPrice
-                      rubyPrice = convPr yPice
+                      rubPrice  = convPr sCurrency realPrice
+                      rubyPrice = convPr sCurrency yPice
                       newToSumm = rubPrice * (fromIntegral quantity) :: Float
                       totalyPrice = rubyPrice * (fromIntegral quantity) :: Float
                       diffPrice   =
