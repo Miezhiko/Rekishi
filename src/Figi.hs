@@ -27,7 +27,6 @@ import qualified Data.Text                as T
 
 import           System.IO
 
-
 import           Client
 import           Service.Instruments      (bonds, currencies, etfs, futures, shares)
 import           Service.MarketData       (getLastPrices)

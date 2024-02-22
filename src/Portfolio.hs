@@ -90,24 +90,34 @@ getAccountStuff g [acc] = do
                   in myUnits + ( myNanos / 1000000000 :: Float )
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units :: Int
             yPrircCor = if (T.unpack iType) == "bond"
-              then yPice * 10 -- I don't understand
+              then
+                -- TODO mystcal, I can't understand
+                -- must learn bond prices somehwere
+                if (T.unpack myFigi) == "TCSS0A105A95"
+                  then yPice * 1000
+                  else yPice * 10
               else yPice
         pure $ Just (re, realPrice, yPrircCor, quantity)
       Nothing -> pure Nothing) $ pf ^. O.positions
 
   dollarPriceMb <- figiToLastPrice $ T.pack dollarFigi
+  cnyPriceMb    <- figiToLastPrice $ T.pack cnyFigi
   let dollarPrice = case dollarPriceMb of
                       Just (u, n) -> (fromIntegral u) + n
-                      Nothing     -> 90.0 :: Float -- fair?
+                      Nothing     -> 92.0 :: Float -- fair?
+      cnyPrice    = case cnyPriceMb of
+                      Just (u, n) -> (fromIntegral u) + n
+                      Nothing     -> 13.0 :: Float -- fair?
       reShares = catMaybes reSharesMb
       (total, dtotal, prices) = foldl (\(summ, summd, dp) (re, realPrice, yPice, quantity) ->
                   let sCurrency = T.unpack $ currency re
-                      rubPrice  = if sCurrency == "usd"
-                                   then realPrice * dollarPrice
-                                   else realPrice
-                      rubyPrice = if sCurrency == "usd"
-                                   then yPice * dollarPrice
-                                   else yPice
+                      convPr pp =
+                        case sCurrency of
+                          "usd" -> pp * dollarPrice
+                          "cny" -> pp * cnyPrice
+                          _     -> pp
+                      rubPrice  = convPr realPrice
+                      rubyPrice = convPr yPice
                       newToSumm = rubPrice * (fromIntegral quantity) :: Float
                       totalyPrice = rubyPrice * (fromIntegral quantity) :: Float
                       diffPrice   =
@@ -162,7 +172,7 @@ getAccountStuff g [acc] = do
 
     setSGR [ SetColor Foreground Vivid Cyan
            , SetConsoleIntensity BoldIntensity ]
-    putStr $ take 4 ( T.unpack ( ticker re ) )
+    putStr $ T.unpack (figi re) --take 4 ( T.unpack ( ticker re ) )
     setSGR [ Reset ]
     putStr $ " " ++ quantityS ++ quantityA
           ++ " " ++ oldpS ++ oldpA

@@ -1,5 +1,6 @@
 module Base
   ( module Export
+  , cnyFigi
   , dollarFigi
   , runClient
   , sinceEpoch
@@ -19,8 +20,11 @@ import           Client
 import           Proto.Google.Protobuf.Timestamp
 import qualified Proto.Google.Protobuf.Timestamp_Fields as TS
 
-dollarFigi ∷ String
-dollarFigi = "BBG0013HGFT4"
+dollarFigi  ∷ String
+cnyFigi     ∷ String
+
+dollarFigi  = "BBG0013HGFT4"
+cnyFigi     = "BBG0013HRTL0"
 
 runClient ∷ ClientConfig -> IO GrpcClient
 runClient cnfg = runExceptT (initGrpcClient cnfg) >>= \case
