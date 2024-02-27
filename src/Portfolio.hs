@@ -88,9 +88,11 @@ getAccountStuff g [acc] = do
   reSharesMb <- traverse (\pos -> do
     let myFigi = pos ^. O.figi
         iType  = pos ^. O.instrumentType
-    reShare       <- figiToReShare myFigi
-    lsPrice       <- figiToLastPrice myFigi
-    yPice         <- getYesterdayPrice g myFigi
+    reShare <- figiToReShare myFigi
+    lsPrice <- figiToLastPrice myFigi
+    yPice   <- if (T.unpack iType) == "bond"
+                  then pure 0
+                  else getYesterdayPrice g myFigi
     case reShare of
       Just re -> do
         let realPrice =
@@ -101,15 +103,7 @@ getAccountStuff g [acc] = do
                       myNanos = fromIntegral $ pos ^. O.currentPrice ^. C.nano
                   in myUnits + ( myNanos / 1000000000 :: Float )
             quantity  = fromIntegral $ pos ^. O.quantity ^. C.units :: Int
-            yPrircCor = if (T.unpack iType) == "bond"
-              then 
-                -- TODO mystcal, I can't understand
-                -- must learn bond prices somehwere
-                if (T.unpack myFigi) == "TCSS0A105A95"
-                  then yPice * 1000
-                  else yPice * 10
-              else yPice
-        pure $ Just (re, realPrice, yPrircCor, quantity)
+        pure $ Just (re, realPrice, yPice, quantity)
       Nothing -> pure Nothing) $ pf ^. O.positions
 
   let reShares = catMaybes reSharesMb
