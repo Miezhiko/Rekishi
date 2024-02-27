@@ -165,7 +165,7 @@ getAccountStuff g [acc] = do
 
     setSGR [ SetColor Foreground Vivid Cyan
            , SetConsoleIntensity BoldIntensity ]
-    putStr $ T.unpack (figi re) --take 4 ( T.unpack ( ticker re ) )
+    putStr $ take 4 ( T.unpack ( ticker re ) )
     setSGR [ Reset ]
     putStr $ " " ++ quantityS ++ quantityA
           ++ " " ++ oldpS ++ oldpA
